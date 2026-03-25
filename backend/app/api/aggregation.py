@@ -26,8 +26,7 @@ async def aggregation_summary(
     session: AsyncSession = Depends(get_session),
 ) -> AggregationSummary:
     if target_date is None:
-        from datetime import date as dt
-        target_date = dt.today()
+        target_date = date_type.today()
     return await get_aggregated_orders(session, target_date)
 
 

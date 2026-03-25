@@ -34,7 +34,12 @@ export default function OrdersPage() {
     <div className="max-w-lg mx-auto p-4">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Мои заказы</h1>
-        <Link href="/catalog"><Button size="sm">Новый заказ</Button></Link>
+        <div className="flex items-center gap-2">
+          <Link href="/templates">
+            <Button variant="outline" size="sm">Шаблоны</Button>
+          </Link>
+          <Link href="/catalog"><Button size="sm">Новый заказ</Button></Link>
+        </div>
       </div>
 
       {loading ? (

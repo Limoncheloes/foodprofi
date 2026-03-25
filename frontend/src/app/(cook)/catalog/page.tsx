@@ -37,11 +37,16 @@ export default function CatalogPage() {
     <div className="max-w-lg mx-auto p-4 pb-24">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Каталог</h1>
-        <Link href="/cart">
-          <Button variant="outline" size="sm">
-            Корзина {total > 0 && <Badge className="ml-1">{total}</Badge>}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/templates">
+            <Button variant="ghost" size="sm">Шаблоны</Button>
+          </Link>
+          <Link href="/cart">
+            <Button variant="outline" size="sm">
+              Корзина {total > 0 && <Badge className="ml-1">{total}</Badge>}
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Category tabs */}

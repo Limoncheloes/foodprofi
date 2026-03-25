@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { apiFetch } from "@/lib/api"
 import { useAuth } from "@/lib/auth"
 import { useCart } from "@/lib/cart"
@@ -15,6 +16,10 @@ export default function CartPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState("")
+  const [savingTemplate, setSavingTemplate] = useState(false)
+  const [templateError, setTemplateError] = useState("")
 
   const UNIT_LABEL: Record<string, string> = {
     kg: "кг", pcs: "шт", liters: "л", packs: "уп"
@@ -48,6 +53,33 @@ export default function CartPage() {
       setError(e instanceof Error ? e.message : "Ошибка при отправке заказа")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const saveAsTemplate = async () => {
+    if (!user?.restaurant_id || !templateName.trim()) return
+    setSavingTemplate(true)
+    setTemplateError("")
+    try {
+      await apiFetch("/orders/templates", {
+        method: "POST",
+        body: JSON.stringify({
+          name: templateName.trim(),
+          restaurant_id: user.restaurant_id,
+          items: items.map((i) => ({
+            catalog_item_id: i.item.id,
+            quantity: i.quantity,
+            variant: i.variant,
+            note: i.note,
+          })),
+        }),
+      })
+      setShowSaveTemplate(false)
+      setTemplateName("")
+    } catch (e: unknown) {
+      setTemplateError(e instanceof Error ? e.message : "Ошибка сохранения")
+    } finally {
+      setSavingTemplate(false)
     }
   }
 
@@ -104,6 +136,44 @@ export default function CartPage() {
       <Button className="w-full" onClick={submit} disabled={loading}>
         {loading ? "Отправка..." : `Отправить заказ (${items.length} позиций)`}
       </Button>
+
+      {/* Save as template */}
+      {!showSaveTemplate ? (
+        <Button
+          variant="outline"
+          className="w-full mt-2"
+          onClick={() => setShowSaveTemplate(true)}
+        >
+          Сохранить как шаблон
+        </Button>
+      ) : (
+        <div className="mt-2 space-y-2">
+          <Input
+            placeholder="Название шаблона"
+            value={templateName}
+            onChange={(e) => setTemplateName(e.target.value)}
+          />
+          {templateError && (
+            <p className="text-sm text-red-500">{templateError}</p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => { setShowSaveTemplate(false); setTemplateName("") }}
+            >
+              Отмена
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={saveAsTemplate}
+              disabled={savingTemplate || !templateName.trim()}
+            >
+              {savingTemplate ? "Сохранение..." : "Сохранить"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

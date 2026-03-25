@@ -25,9 +25,10 @@ export default function CatalogPage() {
 
   useEffect(() => {
     if (!activeCategory || items[activeCategory]) return
+    setLoading(true)
     apiFetch<CatalogItem[]>(`/catalog/items?category_id=${activeCategory}`).then(
       (data) => setItems((prev) => ({ ...prev, [activeCategory]: data }))
-    ).finally(() => setLoading(false))
+    ).catch(() => setLoading(false)).finally(() => setLoading(false))
   }, [activeCategory])
 
   const currentItems = activeCategory ? (items[activeCategory] ?? []) : []

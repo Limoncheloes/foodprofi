@@ -26,6 +26,7 @@ export default function OrdersPage() {
   useEffect(() => {
     apiFetch<Order[]>("/orders")
       .then(setOrders)
+      .catch(() => setLoading(false))
       .finally(() => setLoading(false))
   }, [])
 

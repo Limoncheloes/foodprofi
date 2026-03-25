@@ -15,7 +15,7 @@ export default function CookLayout({ children }: { children: React.ReactNode }) 
     }
   }, [user, loading, router])
 
-  if (loading || !user) return null
+  if (loading || !user || user.role !== "cook") return null
 
   return <CartProvider>{children}</CartProvider>
 }

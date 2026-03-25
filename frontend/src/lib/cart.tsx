@@ -49,7 +49,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   const clear = () => setItems([])
-  const total = items.reduce((acc, i) => acc + i.quantity, 0)
+  const total = items.length
 
   return (
     <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clear, total }}>

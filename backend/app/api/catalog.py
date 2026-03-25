@@ -37,12 +37,12 @@ async def create_category(body: CategoryCreate, session: AsyncSession = Depends(
 
 @router.get("/items", response_model=list[CatalogItemRead])
 async def list_items(
-    category_id: str | None = None,
+    category_id: uuid.UUID | None = None,
     session: AsyncSession = Depends(get_session),
 ):
     q = select(CatalogItem).where(CatalogItem.is_active == True)  # noqa: E712
     if category_id:
-        q = q.where(CatalogItem.category_id == uuid.UUID(category_id))
+        q = q.where(CatalogItem.category_id == category_id)
     result = await session.execute(q)
     return result.scalars().all()
 

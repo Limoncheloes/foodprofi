@@ -23,12 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Fix Critical 1: fetchMe now rethrows so login() can detect failure.
+  // The useEffect init call wraps it in try/catch for silent handling.
   const fetchMe = useCallback(async () => {
     try {
       const me = await apiFetch<User>("/auth/me")
       setUser(me)
-    } catch {
-      setUser(null)
     } finally {
       setLoading(false)
     }
@@ -36,8 +36,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const { access } = getTokens()
-    if (access) fetchMe()
-    else setLoading(false)
+    if (access) {
+      // Silent on init: swallow errors, just set loading=false
+      fetchMe().catch(() => {
+        setUser(null)
+        setLoading(false)
+      })
+    } else {
+      setLoading(false)
+    }
   }, [fetchMe])
 
   const login = async (phone: string, password: string) => {
@@ -46,12 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify({ phone, password }),
     })
     setTokens(data.access_token, data.refresh_token)
+    // fetchMe throws on failure — caller (login form) will catch and show error
     await fetchMe()
   }
 
+  // Fix Important 3: redirect to "/" on logout so no stale page is shown
   const logout = () => {
     clearTokens()
     setUser(null)
+    window.location.href = "/"
   }
 
   return (

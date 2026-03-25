@@ -1,3 +1,5 @@
+import type { TokenResponse } from "./types"
+
 const BASE_URL = "/api"
 
 function getTokens() {
@@ -18,7 +20,20 @@ function clearTokens() {
   localStorage.removeItem("refresh_token")
 }
 
+// Fix Critical 2: deduplicate concurrent refresh calls (thundering herd)
+let refreshingPromise: Promise<string | null> | null = null
+
 async function refreshAccessToken(): Promise<string | null> {
+  if (refreshingPromise) return refreshingPromise
+  refreshingPromise = doRefresh()
+  try {
+    return await refreshingPromise
+  } finally {
+    refreshingPromise = null
+  }
+}
+
+async function doRefresh(): Promise<string | null> {
   const { refresh } = getTokens()
   if (!refresh) return null
 
@@ -33,7 +48,8 @@ async function refreshAccessToken(): Promise<string | null> {
     return null
   }
 
-  const data = await resp.json()
+  // Fix Important 5: type the response as TokenResponse
+  const data = await resp.json() as TokenResponse
   setTokens(data.access_token, data.refresh_token)
   return data.access_token
 }
@@ -44,8 +60,9 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const { access } = getTokens()
 
+  // Fix Important 4: only set Content-Type when body is present
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
     ...(options.headers as Record<string, string>),
   }
   if (access) headers["Authorization"] = `Bearer ${access}`

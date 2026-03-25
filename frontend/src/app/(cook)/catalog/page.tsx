@@ -20,7 +20,7 @@ export default function CatalogPage() {
     apiFetch<Category[]>("/catalog/categories").then((cats) => {
       setCategories(cats)
       if (cats.length) setActiveCategory(cats[0].id)
-    })
+    }).catch(() => setLoading(false))
   }, [])
 
   useEffect(() => {

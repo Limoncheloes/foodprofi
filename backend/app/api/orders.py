@@ -9,9 +9,17 @@ from app.auth.dependencies import get_current_user
 from app.database import get_session
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.user import User, UserRole
-from app.schemas.order import OrderCreate, OrderRead
+from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
 
 router = APIRouter(prefix="/orders", tags=["orders"])
+
+# Role-based allowed status transitions
+ALLOWED_TRANSITIONS: dict[str, dict[OrderStatus, OrderStatus]] = {
+    "buyer": {
+        OrderStatus.submitted: OrderStatus.in_purchase,
+        OrderStatus.in_purchase: OrderStatus.at_warehouse,
+    },
+}
 
 
 @router.post("", response_model=OrderRead, status_code=201)
@@ -75,4 +83,33 @@ async def get_order(
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    return order
+
+
+@router.patch("/{order_id}/status", response_model=OrderRead)
+async def update_order_status(
+    order_id: uuid.UUID,
+    body: OrderStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.execute(
+        select(Order).where(Order.id == order_id).options(selectinload(Order.items))
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    # Admin can cancel any order
+    if body.status == OrderStatus.cancelled and current_user.role == UserRole.admin:
+        order.status = OrderStatus.cancelled
+        await session.commit()
+        return order
+
+    transitions = ALLOWED_TRANSITIONS.get(current_user.role.value, {})
+    if transitions.get(order.status) != body.status:
+        raise HTTPException(status_code=403, detail="Transition not allowed")
+
+    order.status = body.status
+    await session.commit()
     return order

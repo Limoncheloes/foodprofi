@@ -34,6 +34,7 @@ class OrderRead(BaseModel):
     restaurant_id: uuid.UUID
     status: OrderStatus
     is_urgent: bool
+    deadline: datetime | None = None
     created_at: datetime
     items: list[OrderItemRead] = []
 

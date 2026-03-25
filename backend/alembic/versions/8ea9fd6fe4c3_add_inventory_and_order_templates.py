@@ -71,4 +71,5 @@ def downgrade() -> None:
     op.drop_table('order_templates')
     op.drop_table('inventory_logs')
     op.drop_table('inventory')
+    sa.Enum(name='inventoryreason').drop(op.get_bind(), checkfirst=True)
     # ### end Alembic commands ###

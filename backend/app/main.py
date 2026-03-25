@@ -7,6 +7,7 @@ from app.api.admin import router as admin_router
 from app.api.aggregation import router as aggregation_router
 from app.api.catalog import router as catalog_router
 from app.api.orders import router as orders_router
+from app.api.templates import router as templates_router
 from app.auth.router import router as auth_router
 from app.config import settings
 
@@ -28,6 +29,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(catalog_router)
+app.include_router(templates_router)
 app.include_router(orders_router)
 app.include_router(admin_router)
 app.include_router(aggregation_router)

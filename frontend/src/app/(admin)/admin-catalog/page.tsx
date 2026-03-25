@@ -21,6 +21,7 @@ export default function AdminCatalogPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [items, setItems] = useState<CatalogItem[]>([])
   const [adding, setAdding] = useState(false)
+  const [error, setError] = useState("")
   const { register, handleSubmit, reset } = useForm<ItemForm>()
 
   const load = async () => {
@@ -39,6 +40,7 @@ export default function AdminCatalogPage() {
   useEffect(() => { load() }, [])
 
   const onSubmit = async (data: ItemForm) => {
+    setError("")
     try {
       await apiFetch("/catalog/items", {
         method: "POST",
@@ -50,8 +52,8 @@ export default function AdminCatalogPage() {
       reset()
       setAdding(false)
       load()
-    } catch {
-      // silent — form stays open
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Ошибка при сохранении")
     }
   }
 
@@ -67,6 +69,7 @@ export default function AdminCatalogPage() {
       {adding && (
         <Card className="mb-4">
           <CardContent className="p-4">
+            {error && <p className="text-sm text-red-500 mb-2">{error}</p>}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
               <div>
                 <Label>Категория</Label>
@@ -93,7 +96,9 @@ export default function AdminCatalogPage() {
                 <Label>Варианты (через запятую)</Label>
                 <Input {...register("variants")} placeholder="с костью, без кости" />
               </div>
-              <Button type="submit" className="w-full">Сохранить</Button>
+              <Button type="submit" className="w-full" disabled={categories.length === 0}>
+                {categories.length === 0 ? "Загрузка категорий..." : "Сохранить"}
+              </Button>
             </form>
           </CardContent>
         </Card>

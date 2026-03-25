@@ -47,6 +47,14 @@ export interface Order {
   items: OrderItem[]
 }
 
+export interface Restaurant {
+  id: string
+  name: string
+  address: string
+  contact_phone: string
+  is_active: boolean
+}
+
 export interface ApiError {
   detail: string
   code?: string

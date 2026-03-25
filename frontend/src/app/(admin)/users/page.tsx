@@ -18,7 +18,6 @@ export default function UsersPage() {
   useEffect(() => {
     apiFetch<User[]>("/admin/users")
       .then(setUsers)
-      .catch(() => setLoading(false))
       .finally(() => setLoading(false))
   }, [])
 

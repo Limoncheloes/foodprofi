@@ -7,19 +7,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { apiFetch } from "@/lib/api"
-
-interface Restaurant {
-  id: string
-  name: string
-  address: string
-  contact_phone: string
-  is_active: boolean
-}
+import type { Restaurant } from "@/lib/types"
 
 export default function RestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
+  const [error, setError] = useState("")
   const { register, handleSubmit, reset } = useForm<Omit<Restaurant, "id" | "is_active">>()
 
   const load = () => {
@@ -32,13 +26,14 @@ export default function RestaurantsPage() {
   useEffect(load, [])
 
   const onSubmit = async (data: Omit<Restaurant, "id" | "is_active">) => {
+    setError("")
     try {
       await apiFetch("/admin/restaurants", { method: "POST", body: JSON.stringify(data) })
       reset()
       setAdding(false)
       load()
-    } catch {
-      // silent — form stays open
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Ошибка при сохранении")
     }
   }
 
@@ -54,6 +49,7 @@ export default function RestaurantsPage() {
       {adding && (
         <Card className="mb-4">
           <CardContent className="p-4">
+            {error && <p className="text-sm text-red-500 mb-2">{error}</p>}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
               <div>
                 <Label>Название</Label>

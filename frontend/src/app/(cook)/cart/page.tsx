@@ -80,18 +80,18 @@ export default function CartPage() {
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline" size="icon" className="h-8 w-8"
-                  onClick={() => updateQuantity(cartItem.item.id, Math.max(1, cartItem.quantity - 1))}
+                  onClick={() => updateQuantity(cartItem.item.id, cartItem.variant, Math.max(1, cartItem.quantity - 1))}
                 >−</Button>
                 <span className="w-10 text-center">
                   {cartItem.quantity} {UNIT_LABEL[cartItem.item.unit]}
                 </span>
                 <Button
                   variant="outline" size="icon" className="h-8 w-8"
-                  onClick={() => updateQuantity(cartItem.item.id, cartItem.quantity + 1)}
+                  onClick={() => updateQuantity(cartItem.item.id, cartItem.variant, cartItem.quantity + 1)}
                 >+</Button>
                 <Button
                   variant="ghost" size="sm" className="text-red-500"
-                  onClick={() => removeItem(cartItem.item.id)}
+                  onClick={() => removeItem(cartItem.item.id, cartItem.variant)}
                 >✕</Button>
               </div>
             </CardContent>

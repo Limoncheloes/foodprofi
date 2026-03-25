@@ -25,6 +25,6 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole))
     restaurant_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("restaurants.id"), nullable=True
+        ForeignKey("restaurants.id")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

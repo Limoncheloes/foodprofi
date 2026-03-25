@@ -30,6 +30,6 @@ class CatalogItem(Base):
     category_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("categories.id"))
     name: Mapped[str] = mapped_column(String(255))
     unit: Mapped[UnitType] = mapped_column(Enum(UnitType))
-    variants: Mapped[list] = mapped_column(JSON, default=list)
+    variants: Mapped[list[str]] = mapped_column(JSON, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

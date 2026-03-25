@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
@@ -22,7 +24,12 @@ async def get_current_user(
     except (JWTError, ValueError, KeyError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    user = await session.get(User, user_id)
+    try:
+        uid = uuid.UUID(user_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user = await session.get(User, uid)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return user

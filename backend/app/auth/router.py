@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,7 +67,7 @@ async def refresh(body: RefreshRequest, session: AsyncSession = Depends(get_sess
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    user = await session.get(User, payload["sub"])
+    user = await session.get(User, uuid.UUID(payload["sub"]))
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 

@@ -59,3 +59,51 @@ export interface ApiError {
   detail: string
   code?: string
 }
+
+// Aggregation
+
+export interface AggregationRestaurantNeed {
+  restaurant_id: string
+  quantity: number
+  variant: string | null
+}
+
+export interface AggregationItem {
+  catalog_item_id: string
+  name: string
+  unit: string
+  total_needed: number
+  in_stock: number
+  to_buy: number
+  restaurants: AggregationRestaurantNeed[]
+}
+
+export interface AggregationCategory {
+  category_id: string
+  category_name: string
+  items: AggregationItem[]
+}
+
+export interface AggregationSummary {
+  date: string
+  categories: AggregationCategory[]
+}
+
+// Order Templates
+
+export interface TemplateItem {
+  id: string
+  catalog_item_id: string
+  quantity: number
+  variant: string | null
+  note: string | null
+}
+
+export interface Template {
+  id: string
+  user_id: string
+  restaurant_id: string
+  name: string
+  created_at: string
+  items: TemplateItem[]
+}

@@ -19,6 +19,13 @@ ALLOWED_TRANSITIONS: dict[str, dict[OrderStatus, OrderStatus]] = {
         OrderStatus.submitted: OrderStatus.in_purchase,
         OrderStatus.in_purchase: OrderStatus.at_warehouse,
     },
+    "warehouse": {
+        OrderStatus.at_warehouse: OrderStatus.packed,
+        OrderStatus.packed: OrderStatus.in_delivery,
+    },
+    "driver": {
+        OrderStatus.in_delivery: OrderStatus.delivered,
+    },
 }
 
 

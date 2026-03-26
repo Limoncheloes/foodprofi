@@ -26,6 +26,7 @@ export default function InventoryPage() {
   const [adjustQty, setAdjustQty] = useState("")
   const [adjustNote, setAdjustNote] = useState("")
   const [adjustingSubmit, setAdjustingSubmit] = useState(false)
+  const [adjustError, setAdjustError] = useState("")
 
   const load = useCallback(() => {
     setLoading(true)
@@ -36,13 +37,18 @@ export default function InventoryPage() {
       .then(([inv, items]) => {
         setInventory(inv)
         setCatalogItems(items)
-        if (!selectedItemId && items.length > 0) setSelectedItemId(items[0].id)
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Ошибка загрузки"))
       .finally(() => setLoading(false))
-  }, [selectedItemId])
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    if (!selectedItemId && catalogItems.length > 0) {
+      setSelectedItemId(catalogItems[0].id)
+    }
+  }, [catalogItems, selectedItemId])
 
   const receive = async () => {
     if (!selectedItemId || !receiveQty) return
@@ -80,11 +86,12 @@ export default function InventoryPage() {
         }),
       })
       setAdjustingId(null)
+      setAdjustError("")
       setAdjustQty("")
       setAdjustNote("")
       load()
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Ошибка корректировки")
+      setAdjustError(e instanceof Error ? e.message : "Ошибка корректировки")
     } finally {
       setAdjustingSubmit(false)
     }
@@ -189,12 +196,13 @@ export default function InventoryPage() {
                         className="flex-1"
                       />
                     </div>
+                    {adjustError && <p className="text-sm text-red-500">{adjustError}</p>}
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         className="flex-1"
-                        onClick={() => { setAdjustingId(null); setAdjustQty(""); setAdjustNote("") }}
+                        onClick={() => { setAdjustingId(null); setAdjustQty(""); setAdjustNote(""); setAdjustError("") }}
                       >
                         Отмена
                       </Button>

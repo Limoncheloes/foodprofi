@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api.admin import router as admin_router
 from app.api.aggregation import router as aggregation_router
@@ -10,6 +12,7 @@ from app.api.orders import router as orders_router
 from app.api.templates import router as templates_router
 from app.auth.router import router as auth_router
 from app.config import settings
+from app.limiter import limiter
 
 
 @asynccontextmanager
@@ -18,6 +21,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="SupplyFlow API", lifespan=lifespan)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,

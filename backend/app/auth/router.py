@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +14,7 @@ from app.auth.jwt import (
 )
 from app.auth.schemas import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
 from app.database import get_session
+from app.limiter import limiter
 from app.models.user import User
 from app.schemas.user import UserRead
 
@@ -21,7 +22,8 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-async def register(body: RegisterRequest, session: AsyncSession = Depends(get_session)):
+@limiter.limit("5/minute")
+async def register(request: Request, body: RegisterRequest, session: AsyncSession = Depends(get_session)):
     existing = await session.scalar(select(User).where(User.phone == body.phone))
     if existing:
         raise HTTPException(status_code=400, detail="Phone already registered")
@@ -44,7 +46,8 @@ async def register(body: RegisterRequest, session: AsyncSession = Depends(get_se
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest, session: AsyncSession = Depends(get_session)):
+@limiter.limit("10/minute")
+async def login(request: Request, body: LoginRequest, session: AsyncSession = Depends(get_session)):
     user = await session.scalar(select(User).where(User.phone == body.phone))
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(

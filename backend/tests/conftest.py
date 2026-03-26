@@ -36,12 +36,16 @@ async def client():
 
     app.dependency_overrides[get_session] = override_get_session
 
+    from app.limiter import limiter
+    limiter.enabled = False
+
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
 
     app.dependency_overrides.clear()
+    limiter.enabled = True
 
 
 @pytest_asyncio.fixture

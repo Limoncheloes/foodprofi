@@ -271,3 +271,20 @@ async def test_cook_cannot_approve(client: AsyncClient):
     resp = await client.patch(f"/orders/{order_id}/status",
                               json={"status": "submitted"}, headers=cook)
     assert resp.status_code == 403
+
+
+async def test_manager_cannot_approve_already_submitted_order(client: AsyncClient):
+    _, manager, cook, rest_id, item_id = await _setup_approval_scenario(client, "360")
+
+    order_resp = await client.post("/orders", json={
+        "restaurant_id": rest_id,
+        "items": [{"catalog_item_id": item_id, "quantity": 1.0}],
+    }, headers=cook)
+    order_id = order_resp.json()["id"]
+
+    # First approval succeeds
+    await client.patch(f"/orders/{order_id}/status", json={"status": "submitted"}, headers=manager)
+
+    # Second attempt on already-submitted order must be rejected
+    resp = await client.patch(f"/orders/{order_id}/status", json={"status": "submitted"}, headers=manager)
+    assert resp.status_code == 403

@@ -52,9 +52,12 @@ export default function OrdersPage() {
             <Card key={order.id}>
               <CardContent className="p-3">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-muted-foreground">
-                    {new Date(order.created_at).toLocaleDateString("ru-RU")}
-                  </span>
+                  <div>
+                    <p className="text-sm font-medium">{order.restaurant_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(order.created_at).toLocaleDateString("ru-RU")}
+                    </p>
+                  </div>
                   <div className="flex gap-1">
                     {order.is_urgent && (
                       <Badge variant="destructive">Срочно</Badge>

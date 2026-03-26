@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { apiFetch } from "@/lib/api"
-import type { CatalogItem, Order, Restaurant } from "@/lib/types"
+import type { Order } from "@/lib/types"
 
 const STATUS_LABEL: Record<string, string> = {
   at_warehouse: "На складе",
@@ -24,8 +24,6 @@ const ACTION_LABEL: Record<string, string> = {
 
 export default function ReceivingPage() {
   const [orders, setOrders] = useState<Order[]>([])
-  const [restaurants, setRestaurants] = useState<Record<string, string>>({})
-  const [catalogItems, setCatalogItems] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [advancing, setAdvancing] = useState<string | null>(null)
   const [error, setError] = useState("")
@@ -36,16 +34,13 @@ export default function ReceivingPage() {
     Promise.all([
       apiFetch<Order[]>("/orders?status=at_warehouse"),
       apiFetch<Order[]>("/orders?status=packed"),
-      apiFetch<Restaurant[]>("/restaurants"),
-      apiFetch<CatalogItem[]>("/catalog/items"),
     ])
-      .then(([atWarehouse, packed, rests, catalogList]) => {
-        const combined = [...atWarehouse, ...packed].sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      .then(([atWarehouse, packed]) => {
+        setOrders(
+          [...atWarehouse, ...packed].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )
         )
-        setOrders(combined)
-        setRestaurants(Object.fromEntries(rests.map((r) => [r.id, r.name])))
-        setCatalogItems(Object.fromEntries(catalogList.map((ci) => [ci.id, ci.name])))
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Ошибка загрузки"))
       .finally(() => setLoading(false))
@@ -86,9 +81,8 @@ export default function ReceivingPage() {
               <CardContent className="p-3">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <p className="font-medium">
-                      {restaurants[order.restaurant_id] ?? "Ресторан"}
-                    </p>
+                    <p className="font-medium">{order.restaurant_name}</p>
+                    <p className="text-sm text-muted-foreground">{order.user_name}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(order.created_at).toLocaleDateString("ru-RU")}
                     </p>
@@ -106,7 +100,7 @@ export default function ReceivingPage() {
                 <ul className="text-sm text-muted-foreground mb-3 space-y-0.5">
                   {order.items.map((item) => (
                     <li key={item.id}>
-                      {catalogItems[item.catalog_item_id] ?? ""} — {item.quantity}
+                      {item.item_name} — {item.quantity}
                       {item.variant ? ` (${item.variant})` : ""}
                       {item.note ? ` — ${item.note}` : ""}
                     </li>

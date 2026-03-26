@@ -32,6 +32,7 @@ export interface CatalogItem {
 export interface OrderItem {
   id: string
   catalog_item_id: string
+  item_name: string
   quantity: number
   variant: string | null
   note: string | null
@@ -40,7 +41,11 @@ export interface OrderItem {
 export interface Order {
   id: string
   user_id: string
+  user_name: string
   restaurant_id: string
+  restaurant_name: string
+  restaurant_address: string
+  restaurant_phone: string
   status: string
   is_urgent: boolean
   deadline: string | null

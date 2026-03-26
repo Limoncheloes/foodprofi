@@ -5,11 +5,10 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { apiFetch } from "@/lib/api"
-import type { Order, Restaurant } from "@/lib/types"
+import type { Order } from "@/lib/types"
 
 export default function RoutesPage() {
   const [orders, setOrders] = useState<Order[]>([])
-  const [restaurants, setRestaurants] = useState<Record<string, Restaurant>>({})
   const [loading, setLoading] = useState(true)
   const [delivering, setDelivering] = useState<string | null>(null)
   const [error, setError] = useState("")
@@ -17,15 +16,11 @@ export default function RoutesPage() {
   const load = useCallback(() => {
     setLoading(true)
     setError("")
-    Promise.all([
-      apiFetch<Order[]>("/orders?status=in_delivery"),
-      apiFetch<Restaurant[]>("/restaurants"),
-    ])
-      .then(([deliveries, rests]) => {
+    apiFetch<Order[]>("/orders?status=in_delivery")
+      .then((deliveries) => {
         setOrders([...deliveries].sort(
           (a, b) => (a.is_urgent ? -1 : 1) - (b.is_urgent ? -1 : 1)
         ))
-        setRestaurants(Object.fromEntries(rests.map((r) => [r.id, r])))
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : "Ошибка загрузки"))
       .finally(() => setLoading(false))
@@ -61,43 +56,48 @@ export default function RoutesPage() {
         <p className="text-center text-muted-foreground">Нет активных доставок</p>
       ) : (
         <div className="space-y-3">
-          {orders.map((order) => {
-            const rest = restaurants[order.restaurant_id]
-            return (
-              <Card key={order.id}>
-                <CardContent className="p-3">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="font-medium">{rest?.name ?? "Ресторан"}</p>
-                      {rest?.address && (
-                        <p className="text-sm text-muted-foreground">{rest.address}</p>
-                      )}
-                      {rest?.contact_phone && (
-                        <p className="text-xs text-muted-foreground">{rest.contact_phone}</p>
-                      )}
-                    </div>
-                    {order.is_urgent && (
-                      <Badge variant="destructive">Срочно</Badge>
+          {orders.map((order) => (
+            <Card key={order.id}>
+              <CardContent className="p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-medium">{order.restaurant_name}</p>
+                    {order.restaurant_address && (
+                      <p className="text-sm text-muted-foreground">{order.restaurant_address}</p>
+                    )}
+                    {order.restaurant_phone && (
+                      <p className="text-xs text-muted-foreground">{order.restaurant_phone}</p>
                     )}
                   </div>
+                  {order.is_urgent && (
+                    <Badge variant="destructive">Срочно</Badge>
+                  )}
+                </div>
 
-                  <p className="text-xs text-muted-foreground mb-3">
-                    {order.items.length} позиций ·{" "}
-                    {new Date(order.created_at).toLocaleDateString("ru-RU")}
-                  </p>
+                <ul className="text-sm text-muted-foreground mb-3 space-y-0.5">
+                  {order.items.map((item) => (
+                    <li key={item.id}>
+                      {item.item_name} — {item.quantity}
+                      {item.variant ? ` (${item.variant})` : ""}
+                    </li>
+                  ))}
+                </ul>
 
-                  <Button
-                    className="w-full"
-                    size="sm"
-                    disabled={delivering === order.id}
-                    onClick={() => markDelivered(order.id)}
-                  >
-                    {delivering === order.id ? "..." : "Доставлено"}
-                  </Button>
-                </CardContent>
-              </Card>
-            )
-          })}
+                <p className="text-xs text-muted-foreground mb-3">
+                  {new Date(order.created_at).toLocaleDateString("ru-RU")}
+                </p>
+
+                <Button
+                  className="w-full"
+                  size="sm"
+                  disabled={delivering === order.id}
+                  onClick={() => markDelivered(order.id)}
+                >
+                  {delivering === order.id ? "..." : "Доставлено"}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>

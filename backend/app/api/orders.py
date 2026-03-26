@@ -10,6 +10,7 @@ from app.database import get_session
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.user import User, UserRole
 from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
+from app.services.stock import consume_order_stock
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -123,5 +124,9 @@ async def update_order_status(
         raise HTTPException(status_code=403, detail="Transition not allowed")
 
     order.status = body.status
+
+    if body.status == OrderStatus.delivered:
+        await consume_order_stock(session, order.id, current_user.id)
+
     await session.commit()
     return order

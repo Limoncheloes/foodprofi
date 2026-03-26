@@ -107,3 +107,13 @@ export interface Template {
   created_at: string
   items: TemplateItem[]
 }
+
+// Warehouse Inventory
+
+export interface InventoryItem {
+  catalog_item_id: string
+  name: string
+  unit: string
+  quantity: number
+  updated_at: string
+}

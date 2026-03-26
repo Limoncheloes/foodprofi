@@ -1,7 +1,6 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel as _PydanticBase
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,17 +10,10 @@ from app.database import get_session
 from app.models.restaurant import Restaurant
 from app.models.user import User, UserRole
 from app.schemas.restaurant import RestaurantCreate, RestaurantRead
-from app.schemas.user import AdminCreateUserRequest, UserRead
+from app.schemas.user import AdminCreateUserRequest, CreateUserResponse, UserRead
 
 router = APIRouter(prefix="/admin", tags=["admin"],
                    dependencies=[Depends(role_required(UserRole.admin))])
-
-
-class _CreateUserResponse(_PydanticBase):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    user: UserRead
 
 
 @router.get("/users", response_model=list[UserRead])
@@ -61,7 +53,7 @@ async def update_restaurant(
     return rest
 
 
-@router.post("/users", response_model=_CreateUserResponse, status_code=201)
+@router.post("/users", response_model=CreateUserResponse, status_code=201)
 async def create_user(body: AdminCreateUserRequest, session: AsyncSession = Depends(get_session)):
     existing = await session.scalar(select(User).where(User.phone == body.phone))
     if existing:
@@ -78,7 +70,7 @@ async def create_user(body: AdminCreateUserRequest, session: AsyncSession = Depe
     await session.commit()
     await session.refresh(user)
 
-    return _CreateUserResponse(
+    return CreateUserResponse(
         access_token=create_access_token(str(user.id), user.role.value),
         refresh_token=create_refresh_token(str(user.id), user.token_version),
         user=UserRead.model_validate(user),

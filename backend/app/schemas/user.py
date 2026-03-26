@@ -21,3 +21,10 @@ class AdminCreateUserRequest(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     role: UserRole
     restaurant_id: uuid.UUID | None = None
+
+
+class CreateUserResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: UserRead

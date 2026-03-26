@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -106,7 +106,7 @@ async def adjust_inventory(
 
 @router.get("/inventory/logs", response_model=list[InventoryLogRead])
 async def list_inventory_logs(
-    limit: int = 100,
+    limit: int = Query(default=100, ge=1, le=500),
     current_user: User = Depends(role_required(UserRole.warehouse, UserRole.admin)),
     session: AsyncSession = Depends(get_session),
 ) -> list[InventoryLogRead]:

@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.models.inventory import InventoryReason
+
 
 class InventoryItemRead(BaseModel):
     catalog_item_id: uuid.UUID
@@ -35,7 +37,7 @@ class InventoryLogRead(BaseModel):
     catalog_item_id: uuid.UUID
     item_name: str
     delta: float
-    reason: str
+    reason: InventoryReason
     user_name: str
     note: str | None
     created_at: datetime

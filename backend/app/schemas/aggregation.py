@@ -1,6 +1,6 @@
 import uuid
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RestaurantNeed(BaseModel):
@@ -32,8 +32,8 @@ class AggregationSummary(BaseModel):
 
 class PurchaseItem(BaseModel):
     catalog_item_id: uuid.UUID
-    quantity_bought: float
-    price: float | None = None
+    quantity_bought: float = Field(gt=0)
+    price: float | None = Field(default=None, ge=0)
 
 
 class MarkPurchasedRequest(BaseModel):

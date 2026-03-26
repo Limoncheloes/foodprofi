@@ -9,8 +9,9 @@ class Settings(BaseSettings):
     backend_cors_origins: str = "http://localhost:3000"
     minio_endpoint: str = "minio:9000"
     minio_bucket: str = "supplyflow"
-    minio_root_user: str = "minioadmin"
-    minio_root_password: str = "minioadmin_secret"
+    minio_root_user: str
+    minio_root_password: str
+    debug: bool = False
 
     model_config = SettingsConfigDict(env_file=".env")
 

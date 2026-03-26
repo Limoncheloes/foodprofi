@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime
 from app.models.order import OrderStatus
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class OrderItemCreate(BaseModel):
     catalog_item_id: uuid.UUID
-    quantity: float
+    quantity: float = Field(gt=0)
     variant: str | None = None
     note: str | None = None
 

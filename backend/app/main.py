@@ -22,7 +22,13 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="SupplyFlow API", lifespan=lifespan)
+app = FastAPI(
+    title="SupplyFlow API",
+    lifespan=lifespan,
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
+    openapi_url="/openapi.json" if settings.debug else None,
+)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

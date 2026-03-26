@@ -155,7 +155,7 @@ export default function CartPage() {
             type="date"
             className="w-full border rounded px-2 py-1 text-sm"
             value={deadline}
-            min={new Date().toISOString().slice(0, 10)}
+            min={new Date(Date.now() - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 10)}
             onChange={(e) => setDeadline(e.target.value)}
           />
         </div>

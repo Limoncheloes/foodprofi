@@ -17,7 +17,7 @@ class OrderItemRead(BaseModel):
     quantity: float
     variant: str | None
     note: str | None
-    item_name: str = ""
+    item_name: str
 
     model_config = {"from_attributes": True}
 
@@ -38,10 +38,10 @@ class OrderRead(BaseModel):
     deadline: datetime | None = None
     created_at: datetime
     items: list[OrderItemRead] = []
-    user_name: str = ""
-    restaurant_name: str = ""
-    restaurant_address: str = ""
-    restaurant_phone: str = ""
+    user_name: str
+    restaurant_name: str
+    restaurant_address: str
+    restaurant_phone: str
 
     model_config = {"from_attributes": True}
 

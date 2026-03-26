@@ -105,4 +105,5 @@ async def test_order_response_includes_restaurant_and_user_names(client: AsyncCl
     assert data["user_name"] == "Тест Повар"
     assert data["restaurant_name"] == "Тест Ресторан"
     assert data["restaurant_address"] == "ул. Тестовая 1"
+    assert data["restaurant_phone"] == "+996700999999"
     assert data["items"][0]["item_name"] == "Тест Продукт"

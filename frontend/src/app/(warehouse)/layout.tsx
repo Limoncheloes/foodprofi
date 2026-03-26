@@ -27,6 +27,9 @@ export default function WarehouseLayout({ children }: { children: React.ReactNod
         <Link href="/inventory">
           <Button variant="ghost" size="sm">Склад</Button>
         </Link>
+        <Link href="/history">
+          <Button variant="ghost" size="sm">История</Button>
+        </Link>
       </nav>
       {children}
     </div>

@@ -9,6 +9,7 @@ from app.models.inventory import Inventory, InventoryLog, InventoryReason
 from app.models.user import User, UserRole
 from app.schemas.inventory import (
     InventoryItemRead,
+    InventoryLogRead,
     StockAdjustRequest,
     StockAdjustResponse,
     StockReceiveRequest,
@@ -101,3 +102,31 @@ async def adjust_inventory(
         previous_quantity=previous,
         new_quantity=body.quantity,
     )
+
+
+@router.get("/inventory/logs", response_model=list[InventoryLogRead])
+async def list_inventory_logs(
+    limit: int = 100,
+    current_user: User = Depends(role_required(UserRole.warehouse, UserRole.admin)),
+    session: AsyncSession = Depends(get_session),
+) -> list[InventoryLogRead]:
+    result = await session.execute(
+        select(InventoryLog, CatalogItem.name.label("item_name"), User.name.label("user_name"))
+        .join(CatalogItem, InventoryLog.catalog_item_id == CatalogItem.id)
+        .join(User, InventoryLog.user_id == User.id)
+        .order_by(InventoryLog.created_at.desc())
+        .limit(limit)
+    )
+    return [
+        InventoryLogRead(
+            id=log.id,
+            catalog_item_id=log.catalog_item_id,
+            item_name=item_name,
+            delta=log.delta,
+            reason=log.reason.value,
+            user_name=user_name,
+            note=log.note,
+            created_at=log.created_at,
+        )
+        for log, item_name, user_name in result.all()
+    ]

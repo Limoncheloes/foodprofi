@@ -28,3 +28,14 @@ class StockAdjustResponse(BaseModel):
     catalog_item_id: uuid.UUID
     previous_quantity: float
     new_quantity: float
+
+
+class InventoryLogRead(BaseModel):
+    id: uuid.UUID
+    catalog_item_id: uuid.UUID
+    item_name: str
+    delta: float
+    reason: str
+    user_name: str
+    note: str | None
+    created_at: datetime

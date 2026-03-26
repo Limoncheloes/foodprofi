@@ -22,7 +22,7 @@ export default function RoutesPage() {
       apiFetch<Restaurant[]>("/restaurants"),
     ])
       .then(([deliveries, rests]) => {
-        setOrders(deliveries.sort(
+        setOrders([...deliveries].sort(
           (a, b) => (a.is_urgent ? -1 : 1) - (b.is_urgent ? -1 : 1)
         ))
         setRestaurants(Object.fromEntries(rests.map((r) => [r.id, r])))

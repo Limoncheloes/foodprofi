@@ -9,6 +9,7 @@ from app.database import Base
 
 
 class OrderStatus(str, enum.Enum):
+    pending_approval = "pending_approval"
     draft = "draft"
     submitted = "submitted"
     in_purchase = "in_purchase"

@@ -11,6 +11,7 @@ from app.database import Base
 class UserRole(str, enum.Enum):
     cook = "cook"
     buyer = "buyer"
+    manager = "manager"
     warehouse = "warehouse"
     driver = "driver"
     admin = "admin"

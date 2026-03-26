@@ -22,9 +22,9 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
     <div className="min-h-screen flex flex-col">
       <header className="border-b px-4 py-2 flex items-center gap-2">
         <span className="font-semibold text-sm mr-2">Менеджер</span>
-        <Link href="/orders"><Button variant="ghost" size="sm">Заказы</Button></Link>
-        <Link href="/staff"><Button variant="ghost" size="sm">Сотрудники</Button></Link>
-        <Link href="/settings"><Button variant="ghost" size="sm">Настройки</Button></Link>
+        <Link href="/manager/orders"><Button variant="ghost" size="sm">Заказы</Button></Link>
+        <Link href="/manager/staff"><Button variant="ghost" size="sm">Сотрудники</Button></Link>
+        <Link href="/manager/settings"><Button variant="ghost" size="sm">Настройки</Button></Link>
       </header>
       <main className="flex-1">{children}</main>
     </div>

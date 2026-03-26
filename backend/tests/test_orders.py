@@ -59,3 +59,50 @@ async def test_cook_sees_own_orders(client: AsyncClient):
 async def test_unauthenticated_cannot_create_order(client: AsyncClient):
     resp = await client.post("/orders", json={"restaurant_id": "x", "items": []})
     assert resp.status_code == 403
+
+
+async def test_order_response_includes_restaurant_and_user_names(client: AsyncClient):
+    """OrderRead must include user_name, restaurant_name, restaurant_address, and item_name."""
+    # Create admin via DB helper (self-registration as admin is forbidden)
+    admin_headers = await create_admin_headers(client, "+996700999002")
+
+    # Create a restaurant via admin
+    rest_resp = await client.post("/admin/restaurants", json={
+        "name": "Тест Ресторан",
+        "address": "ул. Тестовая 1",
+        "contact_phone": "+996700999999",
+    }, headers=admin_headers)
+    assert rest_resp.status_code == 201
+    restaurant_id = rest_resp.json()["id"]
+
+    # Create a cook with restaurant_id via admin (returns access_token directly)
+    cook_resp = await client.post("/admin/users", json={
+        "phone": "+996700999001",
+        "password": "pass123",
+        "name": "Тест Повар",
+        "role": "cook",
+        "restaurant_id": restaurant_id,
+    }, headers=admin_headers)
+    assert cook_resp.status_code == 201
+    cook_token = cook_resp.json()["access_token"]
+
+    # Create a catalog item
+    cat_resp = await client.post("/catalog/categories", json={"name": "Тест Категория", "sort_order": 99},
+                                  headers=admin_headers)
+    cat_id = cat_resp.json()["id"]
+    item_resp = await client.post("/catalog/items", json={
+        "category_id": cat_id, "name": "Тест Продукт", "unit": "kg", "variants": [],
+    }, headers=admin_headers)
+    catalog_item_id = item_resp.json()["id"]
+
+    # Create order as cook
+    resp = await client.post("/orders", json={
+        "restaurant_id": restaurant_id,
+        "items": [{"catalog_item_id": catalog_item_id, "quantity": 2.0}],
+    }, headers={"Authorization": f"Bearer {cook_token}"})
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["user_name"] == "Тест Повар"
+    assert data["restaurant_name"] == "Тест Ресторан"
+    assert data["restaurant_address"] == "ул. Тестовая 1"
+    assert data["items"][0]["item_name"] == "Тест Продукт"

@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 import enum
+from typing import Any
 
 from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -37,6 +38,24 @@ class Order(Base):
     )
 
     items: Mapped[list["OrderItem"]] = relationship("OrderItem", back_populates="order", lazy="noload")
+    user: Mapped[Any] = relationship("User", foreign_keys=[user_id], lazy="noload")
+    restaurant: Mapped[Any] = relationship("Restaurant", foreign_keys=[restaurant_id], lazy="noload")
+
+    @property
+    def user_name(self) -> str:
+        return self.user.name if self.user else ""
+
+    @property
+    def restaurant_name(self) -> str:
+        return self.restaurant.name if self.restaurant else ""
+
+    @property
+    def restaurant_address(self) -> str:
+        return self.restaurant.address if self.restaurant else ""
+
+    @property
+    def restaurant_phone(self) -> str:
+        return self.restaurant.contact_phone if self.restaurant else ""
 
 
 class OrderItem(Base):
@@ -50,3 +69,8 @@ class OrderItem(Base):
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     order: Mapped["Order"] = relationship("Order", back_populates="items")
+    catalog_item: Mapped[Any] = relationship("CatalogItem", foreign_keys=[catalog_item_id], lazy="noload")
+
+    @property
+    def item_name(self) -> str:
+        return self.catalog_item.name if self.catalog_item else ""

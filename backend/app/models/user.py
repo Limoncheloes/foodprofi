@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 import enum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -27,4 +27,5 @@ class User(Base):
     restaurant_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("restaurants.id")
     )
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

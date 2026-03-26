@@ -77,6 +77,26 @@ async def test_refresh_with_access_token_rejected(client: AsyncClient):
     assert resp2.status_code == 401
 
 
+async def test_logout_invalidates_refresh_token(client: AsyncClient):
+    resp = await client.post("/auth/register", json={
+        "phone": "+996700000006",
+        "password": "pass123",
+        "name": "D",
+        "role": "cook",
+    })
+    tokens = resp.json()
+    access = tokens["access_token"]
+    refresh = tokens["refresh_token"]
+
+    # Logout invalidates the refresh token
+    resp = await client.post("/auth/logout", headers={"Authorization": f"Bearer {access}"})
+    assert resp.status_code == 204
+
+    # Old refresh token must be rejected after logout
+    resp = await client.post("/auth/refresh", json={"refresh_token": refresh})
+    assert resp.status_code == 401
+
+
 async def test_login_rate_limit_returns_429(client: AsyncClient):
     """Verify that rate limiting actually triggers after exceeding the limit."""
     from app.limiter import limiter

@@ -41,7 +41,7 @@ async def register(request: Request, body: RegisterRequest, session: AsyncSessio
 
     return TokenResponse(
         access_token=create_access_token(str(user.id), user.role.value),
-        refresh_token=create_refresh_token(str(user.id)),
+        refresh_token=create_refresh_token(str(user.id), user.token_version),
     )
 
 
@@ -57,7 +57,7 @@ async def login(request: Request, body: LoginRequest, session: AsyncSession = De
 
     return TokenResponse(
         access_token=create_access_token(str(user.id), user.role.value),
-        refresh_token=create_refresh_token(str(user.id)),
+        refresh_token=create_refresh_token(str(user.id), user.token_version),
     )
 
 
@@ -75,10 +75,22 @@ async def refresh(request: Request, body: RefreshRequest, session: AsyncSession 
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
+    if payload.get("ver") != user.token_version:
+        raise HTTPException(status_code=401, detail="Token revoked")
+
     return TokenResponse(
         access_token=create_access_token(str(user.id), user.role.value),
-        refresh_token=create_refresh_token(str(user.id)),
+        refresh_token=create_refresh_token(str(user.id), user.token_version),
     )
+
+
+@router.post("/logout", status_code=204)
+async def logout(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    current_user.token_version += 1
+    await session.commit()
 
 
 @router.get("/me", response_model=UserRead)

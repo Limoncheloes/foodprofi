@@ -70,6 +70,10 @@ async def adjust_inventory(
     current_user: User = Depends(role_required(UserRole.warehouse, UserRole.admin)),
     session: AsyncSession = Depends(get_session),
 ) -> StockAdjustResponse:
+    ci = await session.get(CatalogItem, body.catalog_item_id)
+    if not ci:
+        raise HTTPException(status_code=404, detail="Catalog item not found")
+
     result = await session.execute(
         select(Inventory).where(Inventory.catalog_item_id == body.catalog_item_id)
     )

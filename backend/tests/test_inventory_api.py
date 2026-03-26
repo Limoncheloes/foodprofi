@@ -127,3 +127,13 @@ async def test_inventory_appears_in_list(client: AsyncClient, admin_token: dict)
     resp = await client.get("/warehouse/inventory", headers=warehouse)
     items = resp.json()
     assert any(i["catalog_item_id"] == item_id and i["quantity"] == 3.0 for i in items)
+
+
+async def test_adjust_nonexistent_item_returns_404(client: AsyncClient):
+    warehouse = await register(client, "+99670600014", "warehouse")
+    resp = await client.post(
+        "/warehouse/inventory/adjust",
+        json={"catalog_item_id": str(uuid.uuid4()), "quantity": 5.0},
+        headers=warehouse,
+    )
+    assert resp.status_code == 404

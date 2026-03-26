@@ -6,8 +6,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.database import Base, get_session
 from app.main import app
-
-TEST_DATABASE_URL = "postgresql+asyncpg://supplyflow:supplyflow_secret@postgres:5432/supplyflow_test"
+from helpers import TEST_DATABASE_URL
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestSession = async_sessionmaker(test_engine, expire_on_commit=False)

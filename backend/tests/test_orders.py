@@ -33,7 +33,6 @@ async def test_cook_creates_order(client: AsyncClient):
     cook_token, rest_id = await create_cook_with_restaurant(client, "+996700200001")
 
     # Re-login as admin to get token for catalog creation
-    from app.auth.jwt import hash_password
     admin_headers = await create_admin_headers(client, "+996799000002")
     item_id = await create_catalog_item(client, admin_headers)
 

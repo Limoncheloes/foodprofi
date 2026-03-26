@@ -46,17 +46,24 @@ async def consume_order_stock(
 
     Creates negative inventory if stock is insufficient. Caller must commit.
     """
-    result = await session.execute(
+    items_result = await session.execute(
         select(OrderItem).where(OrderItem.order_id == order_id)
     )
-    items = result.scalars().all()
+    items = items_result.scalars().all()
+
+    if not items:
+        return
+
+    catalog_ids = [item.catalog_item_id for item in items]
+    inv_result = await session.execute(
+        select(Inventory).where(Inventory.catalog_item_id.in_(catalog_ids))
+    )
+    inv_map: dict[uuid.UUID, Inventory] = {
+        inv.catalog_item_id: inv for inv in inv_result.scalars().all()
+    }
 
     for item in items:
-        inv_result = await session.execute(
-            select(Inventory).where(Inventory.catalog_item_id == item.catalog_item_id)
-        )
-        inv = inv_result.scalar_one_or_none()
-
+        inv = inv_map.get(item.catalog_item_id)
         if inv is None:
             inv = Inventory(catalog_item_id=item.catalog_item_id, quantity=-item.quantity)
             session.add(inv)

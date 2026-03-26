@@ -12,7 +12,15 @@ export default function SettingsPage() {
   const [error, setError] = useState("")
 
   useEffect(() => {
-    apiFetch("/manager/settings").then((data) => setSettings(data as RestaurantSettings))
+    const load = async () => {
+      try {
+        const data = await apiFetch("/manager/settings")
+        setSettings(data as RestaurantSettings)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Ошибка загрузки")
+      }
+    }
+    load()
   }, [])
 
   const toggle = async () => {

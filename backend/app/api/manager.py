@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 from app.auth.dependencies import role_required
 from app.auth.jwt import create_access_token, create_refresh_token, hash_password
 from app.database import get_session
-from app.models.order import Order
+from app.models.order import Order, OrderItem
 from app.models.restaurant import Restaurant
 from app.models.user import User, UserRole
 from app.schemas.manager import (
@@ -84,7 +84,7 @@ async def list_restaurant_orders(
         select(Order, User.name.label("user_name"))
         .join(User, Order.user_id == User.id)
         .where(Order.restaurant_id == current_user.restaurant_id)
-        .options(selectinload(Order.items))
+        .options(selectinload(Order.items).selectinload(OrderItem.catalog_item))
         .order_by(Order.created_at.desc())
     )
     return [

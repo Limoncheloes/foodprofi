@@ -15,7 +15,6 @@ from app.services.stock import consume_order_stock
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
-# Role-based allowed status transitions
 ALLOWED_TRANSITIONS: dict[str, dict[OrderStatus, OrderStatus]] = {
     "buyer": {
         OrderStatus.submitted: OrderStatus.in_purchase,
@@ -29,6 +28,12 @@ ALLOWED_TRANSITIONS: dict[str, dict[OrderStatus, OrderStatus]] = {
         OrderStatus.in_delivery: OrderStatus.delivered,
     },
 }
+
+_ORDER_OPTIONS = [
+    selectinload(Order.user),
+    selectinload(Order.restaurant),
+    selectinload(Order.items).selectinload(OrderItem.catalog_item),
+]
 
 
 @router.post("", response_model=OrderRead, status_code=201)
@@ -67,7 +72,7 @@ async def create_order(
     await session.commit()
 
     result = await session.execute(
-        select(Order).where(Order.id == order.id).options(selectinload(Order.items))
+        select(Order).where(Order.id == order.id).options(*_ORDER_OPTIONS)
     )
     return result.scalar_one()
 
@@ -79,7 +84,7 @@ async def list_orders(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    q = select(Order).options(selectinload(Order.items))
+    q = select(Order).options(*_ORDER_OPTIONS)
 
     if current_user.role == UserRole.cook:
         q = q.where(Order.user_id == current_user.id)
@@ -100,7 +105,7 @@ async def get_order(
     session: AsyncSession = Depends(get_session),
 ):
     result = await session.execute(
-        select(Order).where(Order.id == order_id).options(selectinload(Order.items))
+        select(Order).where(Order.id == order_id).options(*_ORDER_OPTIONS)
     )
     order = result.scalar_one_or_none()
     if not order:
@@ -118,19 +123,17 @@ async def update_order_status(
     session: AsyncSession = Depends(get_session),
 ):
     result = await session.execute(
-        select(Order).where(Order.id == order_id).options(selectinload(Order.items))
+        select(Order).where(Order.id == order_id).options(*_ORDER_OPTIONS)
     )
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    # Admin can cancel any order
     if body.status == OrderStatus.cancelled and current_user.role == UserRole.admin:
         order.status = OrderStatus.cancelled
         await session.commit()
         return order
 
-    # Manager can approve (pending_approval → submitted) or reject (pending_approval → cancelled)
     if current_user.role == UserRole.manager:
         if current_user.restaurant_id != order.restaurant_id:
             raise HTTPException(status_code=403, detail="Order belongs to a different restaurant")

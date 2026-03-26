@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.auth.dependencies import role_required
 from app.database import get_session
 from app.models.order import Order, OrderItem, OrderStatus
+from app.models.restaurant import Restaurant
 from app.models.template import OrderTemplate, OrderTemplateItem
 from app.models.user import User, UserRole
 from app.schemas.order import OrderRead
@@ -75,10 +76,17 @@ async def use_template(
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
 
+    restaurant = await session.get(Restaurant, template.restaurant_id)
+    initial_status = (
+        OrderStatus.pending_approval
+        if restaurant and restaurant.requires_approval
+        else OrderStatus.submitted
+    )
+
     order = Order(
         user_id=current_user.id,
         restaurant_id=template.restaurant_id,
-        status=OrderStatus.submitted,
+        status=initial_status,
     )
     session.add(order)
     await session.flush()
@@ -94,6 +102,10 @@ async def use_template(
 
     await session.commit()
     result = await session.execute(
-        select(Order).where(Order.id == order.id).options(selectinload(Order.items))
+        select(Order).where(Order.id == order.id).options(
+            selectinload(Order.user),
+            selectinload(Order.restaurant),
+            selectinload(Order.items).selectinload(OrderItem.catalog_item),
+        )
     )
     return result.scalar_one()

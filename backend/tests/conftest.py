@@ -43,3 +43,25 @@ async def client():
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def admin_token(client: AsyncClient) -> dict:
+    """Create admin user directly in DB (bypasses self-registration restriction)."""
+    from app.auth.jwt import hash_password
+    from app.models.user import User, UserRole
+
+    async with TestSession() as session:
+        user = User(
+            name="TestAdmin",
+            phone="+99699000001",
+            password_hash=hash_password("admin123"),
+            role=UserRole.admin,
+        )
+        session.add(user)
+        await session.commit()
+
+    resp = await client.post(
+        "/auth/login", json={"phone": "+99699000001", "password": "admin123"}
+    )
+    return {"Authorization": f"Bearer {resp.json()['access_token']}"}

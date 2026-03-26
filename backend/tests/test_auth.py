@@ -39,7 +39,7 @@ async def test_login_wrong_password(client: AsyncClient):
 
 
 async def test_duplicate_phone_rejected(client: AsyncClient):
-    payload = {"phone": "+996700000003", "password": "pass", "name": "A", "role": "cook"}
+    payload = {"phone": "+996700000003", "password": "pass123", "name": "A", "role": "cook"}
     await client.post("/auth/register", json=payload)
     resp = await client.post("/auth/register", json=payload)
     assert resp.status_code == 400
@@ -48,7 +48,7 @@ async def test_duplicate_phone_rejected(client: AsyncClient):
 async def test_refresh_token(client: AsyncClient):
     resp = await client.post("/auth/register", json={
         "phone": "+996700000004",
-        "password": "pass",
+        "password": "pass123",
         "name": "B",
         "role": "buyer",
     })
@@ -67,7 +67,7 @@ async def test_refresh_with_access_token_rejected(client: AsyncClient):
     """Access tokens must not be accepted by the refresh endpoint."""
     resp = await client.post("/auth/register", json={
         "phone": "+996700000005",
-        "password": "pass",
+        "password": "pass123",
         "name": "C",
         "role": "cook",
     })

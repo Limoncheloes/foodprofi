@@ -1,43 +1,41 @@
 import pytest
 from httpx import AsyncClient
 
+from helpers import create_admin_headers
+
 
 async def create_cook_with_restaurant(client: AsyncClient, phone: str) -> tuple[str, str]:
     """Returns (access_token, restaurant_id)"""
-    # Create restaurant via admin
-    admin_resp = await client.post("/auth/register", json={
-        "phone": "+996799000001", "password": "adm", "name": "Admin", "role": "admin"
-    })
-    admin_token = admin_resp.json()["access_token"]
+    admin_headers = await create_admin_headers(client, "+996799000001")
 
     rest_resp = await client.post("/admin/restaurants", json={
         "name": "Ресторан Тест", "address": "ул. Ленина 1", "contact_phone": "+996700000000"
-    }, headers={"Authorization": f"Bearer {admin_token}"})
+    }, headers=admin_headers)
     rest_id = rest_resp.json()["id"]
 
     cook_resp = await client.post("/auth/register", json={
-        "phone": phone, "password": "pass", "name": "Cook", "role": "cook",
+        "phone": phone, "password": "pass123", "name": "Cook", "role": "cook",
         "restaurant_id": rest_id
     })
     return cook_resp.json()["access_token"], rest_id
 
 
-async def create_catalog_item(client: AsyncClient, admin_token: str) -> str:
+async def create_catalog_item(client: AsyncClient, admin_headers: dict) -> str:
     cat_resp = await client.post("/catalog/categories", json={"name": "Мясо", "sort_order": 1},
-                                  headers={"Authorization": f"Bearer {admin_token}"})
+                                  headers=admin_headers)
     item_resp = await client.post("/catalog/items", json={
         "category_id": cat_resp.json()["id"], "name": "Говядина", "unit": "kg", "variants": []
-    }, headers={"Authorization": f"Bearer {admin_token}"})
+    }, headers=admin_headers)
     return item_resp.json()["id"]
 
 
 async def test_cook_creates_order(client: AsyncClient):
     cook_token, rest_id = await create_cook_with_restaurant(client, "+996700200001")
 
-    # Need catalog item — get admin token from context (re-register won't work, phone taken)
-    admin_resp = await client.post("/auth/login", json={"phone": "+996799000001", "password": "adm"})
-    admin_token = admin_resp.json()["access_token"]
-    item_id = await create_catalog_item(client, admin_token)
+    # Re-login as admin to get token for catalog creation
+    from app.auth.jwt import hash_password
+    admin_headers = await create_admin_headers(client, "+996799000002")
+    item_id = await create_catalog_item(client, admin_headers)
 
     resp = await client.post("/orders", json={
         "restaurant_id": rest_id,

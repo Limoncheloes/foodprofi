@@ -1,10 +1,12 @@
 import pytest
 from httpx import AsyncClient
 
+from helpers import create_admin_headers
+
 
 async def register(client: AsyncClient, phone: str, role: str, name: str = "U",
                    rest_id: str | None = None) -> dict:
-    body = {"phone": phone, "password": "pass", "name": name, "role": role}
+    body = {"phone": phone, "password": "pass123", "name": name, "role": role}
     if rest_id:
         body["restaurant_id"] = rest_id
     resp = await client.post("/auth/register", json=body)
@@ -20,7 +22,7 @@ async def create_order(client, cook_headers, rest_id, item_id):
 
 
 async def setup_all(client, admin_phone, cook_phone, buyer_phone=None):
-    admin = await register(client, admin_phone, "admin")
+    admin = await create_admin_headers(client, admin_phone)
     cat = await client.post(
         "/catalog/categories", json={"name": "Cat", "sort_order": 1}, headers=admin
     )

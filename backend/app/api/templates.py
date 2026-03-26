@@ -22,6 +22,9 @@ async def create_template(
     current_user: User = Depends(role_required(UserRole.cook, UserRole.admin)),
     session: AsyncSession = Depends(get_session),
 ) -> TemplateRead:
+    if current_user.role == UserRole.cook and body.restaurant_id != current_user.restaurant_id:
+        raise HTTPException(status_code=403, detail="Cooks can only create templates for their own restaurant")
+
     template = OrderTemplate(
         user_id=current_user.id,
         restaurant_id=body.restaurant_id,

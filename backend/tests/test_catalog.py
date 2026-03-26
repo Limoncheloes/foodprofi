@@ -1,15 +1,7 @@
 import pytest
 from httpx import AsyncClient
 
-
-async def get_admin_token(client: AsyncClient) -> str:
-    resp = await client.post("/auth/register", json={
-        "phone": "+996700100001",
-        "password": "adminpass",
-        "name": "Admin",
-        "role": "admin",
-    })
-    return resp.json()["access_token"]
+from helpers import create_admin_headers
 
 
 async def test_list_categories_empty(client: AsyncClient):
@@ -19,8 +11,7 @@ async def test_list_categories_empty(client: AsyncClient):
 
 
 async def test_admin_creates_category_and_item(client: AsyncClient):
-    token = await get_admin_token(client)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = await create_admin_headers(client, "+996700100001")
 
     # Create category
     resp = await client.post("/catalog/categories", json={"name": "Мясо", "sort_order": 1}, headers=headers)
@@ -41,8 +32,7 @@ async def test_admin_creates_category_and_item(client: AsyncClient):
 
 
 async def test_list_items_by_category(client: AsyncClient):
-    token = await get_admin_token(client)
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = await create_admin_headers(client, "+996700100003")
 
     resp = await client.post("/catalog/categories", json={"name": "Овощи", "sort_order": 2}, headers=headers)
     cat_id = resp.json()["id"]
@@ -55,7 +45,7 @@ async def test_list_items_by_category(client: AsyncClient):
 
 async def test_cook_cannot_create_item(client: AsyncClient):
     cook_resp = await client.post("/auth/register", json={
-        "phone": "+996700100002", "password": "pass", "name": "Cook", "role": "cook"
+        "phone": "+996700100002", "password": "pass123", "name": "Cook", "role": "cook"
     })
     token = cook_resp.json()["access_token"]
     resp = await client.post("/catalog/items", json={

@@ -2,10 +2,12 @@ from datetime import date
 import pytest
 from httpx import AsyncClient
 
+from helpers import create_admin_headers
+
 
 async def register(client: AsyncClient, phone: str, role: str, name: str = "U",
                    rest_id: str | None = None) -> dict:
-    body = {"phone": phone, "password": "pass", "name": name, "role": role}
+    body = {"phone": phone, "password": "pass123", "name": name, "role": role}
     if rest_id:
         body["restaurant_id"] = rest_id
     resp = await client.post("/auth/register", json=body)
@@ -43,7 +45,7 @@ async def test_aggregation_requires_buyer_role(client: AsyncClient):
 
 
 async def test_aggregation_groups_by_category(client: AsyncClient):
-    admin = await register(client, "+996700200003", "admin")
+    admin = await create_admin_headers(client, "+996700200003")
     buyer = await register(client, "+996700200004", "buyer")
     _, item_id = await setup_catalog(client, admin)
 
@@ -79,7 +81,7 @@ async def test_aggregation_groups_by_category(client: AsyncClient):
 
 async def test_aggregation_subtracts_inventory(client: AsyncClient):
     """If inventory has 2kg and order needs 5kg, to_buy should be 3kg."""
-    admin = await register(client, "+996700200006", "admin")
+    admin = await create_admin_headers(client, "+996700200006")
     buyer = await register(client, "+996700200007", "buyer")
     _, item_id = await setup_catalog(client, admin)
 
@@ -120,7 +122,7 @@ async def test_aggregation_subtracts_inventory(client: AsyncClient):
 
 
 async def test_mark_purchased_advances_order_status(client: AsyncClient):
-    admin = await register(client, "+996700200009", "admin")
+    admin = await create_admin_headers(client, "+996700200009")
     buyer = await register(client, "+996700200010", "buyer")
     _, item_id = await setup_catalog(client, admin)
 

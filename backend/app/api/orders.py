@@ -28,6 +28,9 @@ async def create_order(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
+    if current_user.role == UserRole.cook and body.restaurant_id != current_user.restaurant_id:
+        raise HTTPException(status_code=403, detail="Cooks can only order for their own restaurant")
+
     order = Order(
         user_id=current_user.id,
         restaurant_id=body.restaurant_id,
@@ -82,6 +85,8 @@ async def get_order(
     )
     order = result.scalar_one_or_none()
     if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if current_user.role == UserRole.cook and order.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
 

@@ -1,4 +1,4 @@
-export type UserRole = "cook" | "buyer" | "warehouse" | "driver" | "admin"
+export type UserRole = "cook" | "buyer" | "warehouse" | "driver" | "admin" | "manager"
 
 export interface User {
   id: string
@@ -130,4 +130,29 @@ export interface InventoryLogEntry {
   user_name: string
   note: string | null
   created_at: string
+}
+
+export interface ManagerOrder {
+  id: string
+  user_id: string
+  user_name: string
+  restaurant_id: string
+  status: string
+  is_urgent: boolean
+  deadline: string | null
+  created_at: string
+  items: OrderItem[]
+}
+
+export interface StaffMember {
+  id: string
+  name: string
+  phone: string
+  role: string
+  restaurant_id: string | null
+}
+
+export interface RestaurantSettings {
+  restaurant_id: string
+  requires_approval: boolean
 }

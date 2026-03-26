@@ -16,6 +16,8 @@ export default function CartPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [isUrgent, setIsUrgent] = useState(false)
+  const [deadline, setDeadline] = useState("")
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState("")
   const [savingTemplate, setSavingTemplate] = useState(false)
@@ -38,7 +40,8 @@ export default function CartPage() {
         method: "POST",
         body: JSON.stringify({
           restaurant_id: user.restaurant_id,
-          is_urgent: false,
+          is_urgent: isUrgent,
+          deadline: deadline ? new Date(deadline).toISOString() : null,
           items: items.map((i) => ({
             catalog_item_id: i.item.id,
             quantity: i.quantity,
@@ -132,6 +135,31 @@ export default function CartPage() {
       </div>
 
       {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+
+      {/* Order options */}
+      <div className="space-y-2 mb-3 p-3 border rounded-md">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Срочный заказ</span>
+          <Button
+            type="button"
+            variant={isUrgent ? "destructive" : "outline"}
+            size="sm"
+            onClick={() => setIsUrgent((v) => !v)}
+          >
+            {isUrgent ? "Да" : "Нет"}
+          </Button>
+        </div>
+        <div>
+          <label className="text-sm font-medium block mb-1">Дедлайн</label>
+          <input
+            type="date"
+            className="w-full border rounded px-2 py-1 text-sm"
+            value={deadline}
+            min={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setDeadline(e.target.value)}
+          />
+        </div>
+      </div>
 
       <Button className="w-full" onClick={submit} disabled={loading}>
         {loading ? "Отправка..." : `Отправить заказ (${items.length} позиций)`}

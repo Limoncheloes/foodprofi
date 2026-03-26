@@ -43,6 +43,7 @@ export interface Order {
   restaurant_id: string
   status: string
   is_urgent: boolean
+  deadline: string | null
   created_at: string
   items: OrderItem[]
 }
@@ -116,4 +117,17 @@ export interface InventoryItem {
   unit: string
   quantity: number
   updated_at: string
+}
+
+// Inventory Log
+
+export interface InventoryLogEntry {
+  id: string
+  catalog_item_id: string
+  item_name: string
+  delta: number
+  reason: "received" | "consumed" | "adjusted"
+  user_name: string
+  note: string | null
+  created_at: string
 }

@@ -75,3 +75,18 @@ async def test_refresh_with_access_token_rejected(client: AsyncClient):
     # Using an access token where refresh is expected must fail
     resp2 = await client.post("/auth/refresh", json={"refresh_token": access_token})
     assert resp2.status_code == 401
+
+
+async def test_login_rate_limit_returns_429(client: AsyncClient):
+    """Verify that rate limiting actually triggers after exceeding the limit."""
+    from app.limiter import limiter
+
+    limiter.enabled = True
+    try:
+        # login limit is 10/minute — exhaust it with a bad phone
+        for _ in range(10):
+            await client.post("/auth/login", json={"phone": "+99600000000", "password": "x"})
+        resp = await client.post("/auth/login", json={"phone": "+99600000000", "password": "x"})
+        assert resp.status_code == 429
+    finally:
+        limiter.enabled = False

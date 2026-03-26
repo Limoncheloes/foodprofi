@@ -18,10 +18,12 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # PostgreSQL 12+ allows ALTER TYPE ADD VALUE inside a transaction
-    # as long as the new value is not used in the same transaction.
-    op.execute(sa.text("ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'manager'"))
-    op.execute(sa.text("ALTER TYPE orderstatus ADD VALUE IF NOT EXISTS 'pending_approval'"))
+    # ALTER TYPE ADD VALUE must run outside a transaction block in PostgreSQL
+    connection = op.get_bind()
+    connection.execution_options(isolation_level="AUTOCOMMIT")
+    connection.execute(sa.text("ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'manager'"))
+    connection.execute(sa.text("ALTER TYPE orderstatus ADD VALUE IF NOT EXISTS 'pending_approval'"))
+    connection.execution_options(isolation_level="READ COMMITTED")
     op.add_column(
         'restaurants',
         sa.Column('requires_approval', sa.Boolean(), nullable=False, server_default='false'),

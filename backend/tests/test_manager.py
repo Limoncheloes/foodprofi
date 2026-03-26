@@ -55,3 +55,100 @@ async def test_non_admin_cannot_create_user(client: AsyncClient):
         "phone": "+996000100021", "password": "pass123", "name": "X", "role": "cook",
     }, headers=cook)
     assert resp.status_code == 403
+
+
+async def test_manager_can_add_cook(client: AsyncClient):
+    _, manager, rest_id = await make_restaurant_and_manager(client, "200")
+
+    resp = await client.post("/manager/staff", json={
+        "phone": "+996000200010",
+        "password": "pass123",
+        "name": "Повар Азиз",
+        "role": "cook",
+    }, headers=manager)
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["role"] == "cook"
+    assert data["restaurant_id"] == rest_id
+
+
+async def test_manager_cannot_add_buyer_role(client: AsyncClient):
+    _, manager, _ = await make_restaurant_and_manager(client, "210")
+
+    resp = await client.post("/manager/staff", json={
+        "phone": "+996000210010",
+        "password": "pass123",
+        "name": "X",
+        "role": "buyer",
+    }, headers=manager)
+    assert resp.status_code == 422  # validation error — buyer not in allowed roles
+
+
+async def test_manager_lists_staff(client: AsyncClient):
+    _, manager, _ = await make_restaurant_and_manager(client, "220")
+
+    await client.post("/manager/staff", json={
+        "phone": "+996000220010", "password": "pass123", "name": "Cook1", "role": "cook",
+    }, headers=manager)
+
+    resp = await client.get("/manager/staff", headers=manager)
+    assert resp.status_code == 200
+    staff = resp.json()
+    roles = {s["role"] for s in staff}
+    assert "manager" in roles
+    assert "cook" in roles
+
+
+async def test_manager_views_restaurant_orders(client: AsyncClient):
+    admin, manager, rest_id = await make_restaurant_and_manager(client, "230")
+
+    cook_resp = await client.post("/manager/staff", json={
+        "phone": "+996000230010", "password": "pass123", "name": "Cook", "role": "cook",
+    }, headers=manager)
+    cook_token = cook_resp.json()["access_token"]
+    cook_headers = {"Authorization": f"Bearer {cook_token}"}
+
+    cat = await client.post("/catalog/categories", json={"name": "C", "sort_order": 1}, headers=admin)
+    item = await client.post("/catalog/items", json={
+        "category_id": cat.json()["id"], "name": "Flour", "unit": "kg", "variants": [],
+    }, headers=admin)
+    item_id = item.json()["id"]
+
+    await client.post("/orders", json={
+        "restaurant_id": rest_id,
+        "items": [{"catalog_item_id": item_id, "quantity": 2.0}],
+    }, headers=cook_headers)
+
+    resp = await client.get("/manager/orders", headers=manager)
+    assert resp.status_code == 200
+    orders = resp.json()
+    assert len(orders) >= 1
+    assert "user_name" in orders[0]
+
+
+async def test_manager_reads_settings(client: AsyncClient):
+    _, manager, _ = await make_restaurant_and_manager(client, "240")
+
+    resp = await client.get("/manager/settings", headers=manager)
+    assert resp.status_code == 200
+    assert resp.json()["requires_approval"] is False
+
+
+async def test_manager_updates_settings(client: AsyncClient):
+    _, manager, _ = await make_restaurant_and_manager(client, "250")
+
+    resp = await client.patch("/manager/settings", json={"requires_approval": True}, headers=manager)
+    assert resp.status_code == 200
+    assert resp.json()["requires_approval"] is True
+
+    resp2 = await client.get("/manager/settings", headers=manager)
+    assert resp2.json()["requires_approval"] is True
+
+
+async def test_cook_cannot_access_manager_endpoints(client: AsyncClient):
+    cook_resp = await client.post("/auth/register", json={
+        "phone": "+996000260010", "password": "pass123", "name": "Cook", "role": "cook",
+    })
+    cook = {"Authorization": f"Bearer {cook_resp.json()['access_token']}"}
+    resp = await client.get("/manager/staff", headers=cook)
+    assert resp.status_code == 403

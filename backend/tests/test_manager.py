@@ -152,3 +152,122 @@ async def test_cook_cannot_access_manager_endpoints(client: AsyncClient):
     cook = {"Authorization": f"Bearer {cook_resp.json()['access_token']}"}
     resp = await client.get("/manager/staff", headers=cook)
     assert resp.status_code == 403
+
+
+async def _setup_approval_scenario(client: AsyncClient, phone_suffix: str):
+    """Returns (admin_headers, manager_headers, cook_headers, rest_id, item_id)."""
+    admin, manager, rest_id = await make_restaurant_and_manager(client, phone_suffix)
+
+    # Enable approval
+    await client.patch("/manager/settings", json={"requires_approval": True}, headers=manager)
+
+    # Add cook
+    cook_resp = await client.post("/manager/staff", json={
+        "phone": f"+99600{phone_suffix}0010",
+        "password": "pass123",
+        "name": "Cook",
+        "role": "cook",
+    }, headers=manager)
+    cook = {"Authorization": f"Bearer {cook_resp.json()['access_token']}"}
+
+    # Create catalog item
+    cat = await client.post("/catalog/categories", json={"name": "C", "sort_order": 1}, headers=admin)
+    item = await client.post("/catalog/items", json={
+        "category_id": cat.json()["id"], "name": "Rice", "unit": "kg", "variants": [],
+    }, headers=admin)
+
+    return admin, manager, cook, rest_id, item.json()["id"]
+
+
+async def test_order_created_as_pending_when_approval_required(client: AsyncClient):
+    _, _, cook, rest_id, item_id = await _setup_approval_scenario(client, "300")
+
+    resp = await client.post("/orders", json={
+        "restaurant_id": rest_id,
+        "items": [{"catalog_item_id": item_id, "quantity": 1.0}],
+    }, headers=cook)
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "pending_approval"
+
+
+async def test_order_created_as_submitted_when_no_approval_required(client: AsyncClient):
+    _, manager, rest_id = await make_restaurant_and_manager(client, "310")
+    # requires_approval defaults to False
+
+    cook_resp = await client.post("/manager/staff", json={
+        "phone": "+99600031010", "password": "pass123", "name": "Cook", "role": "cook",
+    }, headers=manager)
+    cook = {"Authorization": f"Bearer {cook_resp.json()['access_token']}"}
+
+    admin_h = await create_admin_headers(client, "+9960031099")
+    cat = await client.post("/catalog/categories", json={"name": "C", "sort_order": 1}, headers=admin_h)
+    item = await client.post("/catalog/items", json={
+        "category_id": cat.json()["id"], "name": "Salt", "unit": "kg", "variants": [],
+    }, headers=admin_h)
+
+    resp = await client.post("/orders", json={
+        "restaurant_id": rest_id,
+        "items": [{"catalog_item_id": item.json()["id"], "quantity": 1.0}],
+    }, headers=cook)
+    assert resp.status_code == 201
+    assert resp.json()["status"] == "submitted"
+
+
+async def test_manager_approves_order(client: AsyncClient):
+    _, manager, cook, rest_id, item_id = await _setup_approval_scenario(client, "320")
+
+    order_resp = await client.post("/orders", json={
+        "restaurant_id": rest_id,
+        "items": [{"catalog_item_id": item_id, "quantity": 1.0}],
+    }, headers=cook)
+    order_id = order_resp.json()["id"]
+    assert order_resp.json()["status"] == "pending_approval"
+
+    resp = await client.patch(f"/orders/{order_id}/status",
+                              json={"status": "submitted"}, headers=manager)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "submitted"
+
+
+async def test_manager_rejects_order(client: AsyncClient):
+    _, manager, cook, rest_id, item_id = await _setup_approval_scenario(client, "330")
+
+    order_resp = await client.post("/orders", json={
+        "restaurant_id": rest_id,
+        "items": [{"catalog_item_id": item_id, "quantity": 1.0}],
+    }, headers=cook)
+    order_id = order_resp.json()["id"]
+
+    resp = await client.patch(f"/orders/{order_id}/status",
+                              json={"status": "cancelled"}, headers=manager)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "cancelled"
+
+
+async def test_manager_cannot_approve_other_restaurants_order(client: AsyncClient):
+    _, manager_a, cook_a, rest_a, item_id = await _setup_approval_scenario(client, "340")
+    _, manager_b, _ = await make_restaurant_and_manager(client, "341")
+
+    order_resp = await client.post("/orders", json={
+        "restaurant_id": rest_a,
+        "items": [{"catalog_item_id": item_id, "quantity": 1.0}],
+    }, headers=cook_a)
+    order_id = order_resp.json()["id"]
+
+    resp = await client.patch(f"/orders/{order_id}/status",
+                              json={"status": "submitted"}, headers=manager_b)
+    assert resp.status_code == 403
+
+
+async def test_cook_cannot_approve(client: AsyncClient):
+    _, manager, cook, rest_id, item_id = await _setup_approval_scenario(client, "350")
+
+    order_resp = await client.post("/orders", json={
+        "restaurant_id": rest_id,
+        "items": [{"catalog_item_id": item_id, "quantity": 1.0}],
+    }, headers=cook)
+    order_id = order_resp.json()["id"]
+
+    resp = await client.patch(f"/orders/{order_id}/status",
+                              json={"status": "submitted"}, headers=cook)
+    assert resp.status_code == 403

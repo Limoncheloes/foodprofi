@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.auth.dependencies import get_current_user
 from app.database import get_session
 from app.models.order import Order, OrderItem, OrderStatus
+from app.models.restaurant import Restaurant
 from app.models.user import User, UserRole
 from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
 from app.services.stock import consume_order_stock
@@ -39,12 +40,22 @@ async def create_order(
     if current_user.role == UserRole.cook and body.restaurant_id != current_user.restaurant_id:
         raise HTTPException(status_code=403, detail="Cooks can only order for their own restaurant")
 
+    restaurant = await session.get(Restaurant, body.restaurant_id)
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    initial_status = (
+        OrderStatus.pending_approval
+        if restaurant.requires_approval
+        else OrderStatus.submitted
+    )
+
     order = Order(
         user_id=current_user.id,
         restaurant_id=body.restaurant_id,
         is_urgent=body.is_urgent,
         deadline=body.deadline,
-        status=OrderStatus.submitted,
+        status=initial_status,
     )
     session.add(order)
     await session.flush()
@@ -116,6 +127,18 @@ async def update_order_status(
     # Admin can cancel any order
     if body.status == OrderStatus.cancelled and current_user.role == UserRole.admin:
         order.status = OrderStatus.cancelled
+        await session.commit()
+        return order
+
+    # Manager can approve (pending_approval → submitted) or reject (pending_approval → cancelled)
+    if current_user.role == UserRole.manager:
+        if current_user.restaurant_id != order.restaurant_id:
+            raise HTTPException(status_code=403, detail="Order belongs to a different restaurant")
+        if order.status != OrderStatus.pending_approval:
+            raise HTTPException(status_code=403, detail="Only pending_approval orders can be approved or rejected")
+        if body.status not in (OrderStatus.submitted, OrderStatus.cancelled):
+            raise HTTPException(status_code=403, detail="Manager can only approve (submitted) or reject (cancelled)")
+        order.status = body.status
         await session.commit()
         return order
 

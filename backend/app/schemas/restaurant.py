@@ -14,5 +14,10 @@ class RestaurantRead(BaseModel):
     address: str
     contact_phone: str
     is_active: bool
+    requires_approval: bool
 
     model_config = {"from_attributes": True}
+
+
+class RestaurantSettingsUpdate(BaseModel):
+    requires_approval: bool

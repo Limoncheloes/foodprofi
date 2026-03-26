@@ -1,6 +1,4 @@
 import uuid
-import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 
 
@@ -137,3 +135,21 @@ async def test_adjust_nonexistent_item_returns_404(client: AsyncClient):
         headers=warehouse,
     )
     assert resp.status_code == 404
+
+
+async def test_adjust_without_prior_receive_sets_quantity(
+    client: AsyncClient, admin_token: dict
+):
+    """adjust creates a new Inventory row with previous_quantity=0.0 when none exists."""
+    warehouse = await register(client, "+99670600015", "warehouse")
+    item_id = await setup_catalog_item(client, admin_token)
+
+    resp = await client.post(
+        "/warehouse/inventory/adjust",
+        json={"catalog_item_id": item_id, "quantity": 5.0},
+        headers=warehouse,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["previous_quantity"] == 0.0
+    assert data["new_quantity"] == 5.0

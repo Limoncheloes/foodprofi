@@ -80,6 +80,9 @@ def upgrade() -> None:
         sa.CheckConstraint('quantity_ordered > 0', name='ck_procurement_item_qty_positive'),
     )
 
+    op.create_index('ix_procurement_items_order_id', 'procurement_items', ['order_id'])
+    op.create_index('ix_procurement_items_buyer_id', 'procurement_items', ['buyer_id'])
+
     op.create_table(
         'routing_rules',
         sa.Column('id', sa.UUID(), nullable=False, primary_key=True),
@@ -96,10 +99,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    connection = op.get_bind()
     op.drop_table('routing_rules')
+    op.drop_index('ix_procurement_items_buyer_id', table_name='procurement_items', if_exists=True)
+    op.drop_index('ix_procurement_items_order_id', table_name='procurement_items', if_exists=True)
     op.drop_table('procurement_items')
     op.drop_constraint('fk_categories_default_buyer', 'categories', type_='foreignkey')
     op.drop_column('categories', 'default_buyer_id')
-    connection = op.get_bind()
     connection.execute(sa.text("DROP TYPE IF EXISTS procurementitemstatus"))
     # PostgreSQL does not support removing enum values from userrole/orderstatus

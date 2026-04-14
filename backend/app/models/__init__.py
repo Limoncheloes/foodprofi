@@ -4,3 +4,4 @@ from app.models.catalog import Category, CatalogItem, UnitType  # noqa: F401
 from app.models.order import Order, OrderItem, OrderStatus  # noqa: F401
 from app.models.inventory import Inventory, InventoryLog, InventoryReason  # noqa: F401
 from app.models.template import OrderTemplate, OrderTemplateItem  # noqa: F401
+from app.models.procurement import ProcurementItem, RoutingRule, ProcurementItemStatus  # noqa: F401

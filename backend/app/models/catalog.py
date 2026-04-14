@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime
 import enum
+from typing import Any
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, JSON, String, Boolean, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -36,3 +37,5 @@ class CatalogItem(Base):
     variants: Mapped[list[str]] = mapped_column(JSON, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    category: Mapped[Any] = relationship("Category", foreign_keys=[category_id], lazy="noload")

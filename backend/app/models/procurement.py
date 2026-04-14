@@ -40,7 +40,7 @@ class ProcurementItem(Base):
     quantity_received: Mapped[float | None] = mapped_column(Numeric(10, 3), nullable=True)
     unit: Mapped[str] = mapped_column(String(50))
     status: Mapped[ProcurementItemStatus] = mapped_column(
-        Enum(ProcurementItemStatus, name="procurementitemstatus", create_type=False),
+        Enum(ProcurementItemStatus, name="procurementitemstatus"),
         default=ProcurementItemStatus.pending_curator,
     )
     buyer_id: Mapped[uuid.UUID | None] = mapped_column(

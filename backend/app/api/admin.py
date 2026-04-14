@@ -13,12 +13,18 @@ from app.schemas.restaurant import RestaurantCreate, RestaurantRead
 from app.schemas.user import AdminCreateUserRequest, CreateUserResponse, UserRead
 
 router = APIRouter(prefix="/admin", tags=["admin"],
-                   dependencies=[Depends(role_required(UserRole.admin))])
+                   dependencies=[Depends(role_required(UserRole.admin, UserRole.curator))])
 
 
 @router.get("/users", response_model=list[UserRead])
-async def list_users(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(select(User))
+async def list_users(role: str | None = None, session: AsyncSession = Depends(get_session)):
+    q = select(User)
+    if role:
+        try:
+            q = q.where(User.role == UserRole(role))
+        except ValueError:
+            raise HTTPException(400, detail=f"Invalid role: {role}")
+    result = await session.execute(q)
     return result.scalars().all()
 
 

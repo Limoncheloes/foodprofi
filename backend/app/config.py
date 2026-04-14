@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     minio_root_user: str
     minio_root_password: str
     debug: bool = False
+    whatsapp_group_jid: str = ""          # пусто = не настроено
+    whatsapp_curator_phone: str = ""
 
     model_config = SettingsConfigDict(env_file=".env")
 

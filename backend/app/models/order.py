@@ -13,11 +13,14 @@ class OrderStatus(str, enum.Enum):
     pending_approval = "pending_approval"
     draft = "draft"
     submitted = "submitted"
+    routing = "routing"
     in_purchase = "in_purchase"
     at_warehouse = "at_warehouse"
     packed = "packed"
     in_delivery = "in_delivery"
     delivered = "delivered"
+    received = "received"
+    closed = "closed"
     cancelled = "cancelled"
 
 

@@ -15,6 +15,7 @@ class UserRole(str, enum.Enum):
     warehouse = "warehouse"
     driver = "driver"
     admin = "admin"
+    curator = "curator"
 
 
 class User(Base):

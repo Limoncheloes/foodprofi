@@ -161,3 +161,44 @@ export interface RestaurantSettings {
   restaurant_id: string
   requires_approval: boolean
 }
+
+// Procurement Module
+
+export interface ProcurementItem {
+  id: string
+  order_id: string
+  catalog_item_id: string | null
+  raw_name: string | null
+  display_name: string
+  quantity_ordered: number
+  quantity_received: number | null
+  unit: string
+  status: "pending_curator" | "assigned" | "purchased" | "not_found" | "substituted"
+  buyer_id: string | null
+  category_id: string | null
+  curator_note: string | null
+  substitution_note: string | null
+  is_catalog_item: boolean
+  created_at: string
+}
+
+export interface ProcurementOrder {
+  id: string
+  restaurant_id: string
+  restaurant_name: string
+  user_id: string
+  user_name: string
+  status: string
+  created_at: string
+  items: ProcurementItem[]
+}
+
+export interface WhatsAppUrls {
+  primary: string | null
+  fallback: string
+}
+
+export interface SubmitOrderResponse {
+  order: ProcurementOrder
+  whatsapp: WhatsAppUrls
+}

@@ -1,6 +1,7 @@
 """
 Seed script: creates 5 restaurants, 4 categories, 50 catalog items,
-1 admin, 5 cooks (one per restaurant), 2 buyers, 1 warehouse, 1 driver.
+1 admin, 5 cooks (one per restaurant), 2 buyers, 1 warehouse, 1 driver,
+1 curator. Also sets default_buyer_id on each category.
 Run: docker compose exec backend python seed.py
 """
 import asyncio
@@ -103,11 +104,13 @@ async def seed():
             restaurants.append(r)
         await s.flush()
 
-        # Categories + Items
+        # Categories + Items — collect category objects to assign buyer later
+        categories = []
         for (cat_name, sort), items in zip(CATEGORIES, ITEMS_BY_CATEGORY.values()):
             cat = Category(name=cat_name, sort_order=sort)
             s.add(cat)
             await s.flush()
+            categories.append(cat)
             for item_name, unit, variants in items:
                 s.add(CatalogItem(category_id=cat.id, name=item_name, unit=unit, variants=variants))
 
@@ -122,9 +125,15 @@ async def seed():
                        role=UserRole.cook, restaurant_id=rest.id))
 
         # Buyers
-        for i in range(2):
-            s.add(User(name=f"Закупщик {i+1}", phone=f"+99670022000{i+1}",
-                       password_hash=hash_password("buyer123"), role=UserRole.buyer))
+        buyer = User(name="Закупщик 1", phone="+996700220001",
+                     password_hash=hash_password("buyer123"), role=UserRole.buyer)
+        s.add(buyer)
+        s.add(User(name="Закупщик 2", phone="+996700220002",
+                   password_hash=hash_password("buyer123"), role=UserRole.buyer))
+
+        # Curator
+        s.add(User(name="Куратор", phone="+99699000010",
+                   password_hash=hash_password("curator123"), role=UserRole.curator))
 
         # Warehouse
         s.add(User(name="Кладовщик", phone="+996700330001",
@@ -134,11 +143,17 @@ async def seed():
         s.add(User(name="Водитель", phone="+996700440001",
                    password_hash=hash_password("driver123"), role=UserRole.driver))
 
+        # Flush to get buyer.id, then assign default_buyer_id on every category
+        await s.flush()
+        for cat in categories:
+            cat.default_buyer_id = buyer.id
+
         await s.commit()
         print("Seed complete.")
-        print("Admin: +996700000000 / admin123")
-        print("Cook:  +996700110001 / cook123")
-        print("Buyer: +996700220001 / buyer123")
+        print("Admin:   +996700000000 / admin123")
+        print("Cook:    +996700110001 / cook123")
+        print("Buyer:   +996700220001 / buyer123")
+        print("Curator: +99699000010  / curator123")
 
 
 asyncio.run(seed())

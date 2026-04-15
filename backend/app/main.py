@@ -13,6 +13,7 @@ from app.api.orders import router as orders_router
 from app.api.templates import router as templates_router
 from app.api.restaurants import router as restaurants_router
 from app.api.warehouse import router as warehouse_router
+from app.api.kitchen import router as kitchen_router
 from app.api.manager import router as manager_router
 from app.auth.router import router as auth_router
 from app.config import settings
@@ -65,6 +66,7 @@ app.include_router(aggregation_router)
 app.include_router(restaurants_router)
 app.include_router(warehouse_router)
 app.include_router(manager_router)
+app.include_router(kitchen_router)
 
 
 @app.get("/health")

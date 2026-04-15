@@ -1,4 +1,4 @@
-export type UserRole = "cook" | "buyer" | "warehouse" | "driver" | "admin" | "manager"
+export type UserRole = "cook" | "buyer" | "warehouse" | "driver" | "admin" | "manager" | "curator"
 
 export interface User {
   id: string
@@ -201,4 +201,16 @@ export interface WhatsAppUrls {
 export interface SubmitOrderResponse {
   order: ProcurementOrder
   whatsapp: WhatsAppUrls
+}
+
+export interface PendingItemRead {
+  id: string
+  order_id: string
+  display_name: string
+  raw_name: string | null
+  quantity_ordered: number
+  unit: string
+  is_catalog_item: boolean
+  restaurant_name: string
+  created_at: string
 }

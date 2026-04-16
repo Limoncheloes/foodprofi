@@ -1,14 +1,17 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import role_required
 from app.auth.jwt import create_access_token, create_refresh_token, hash_password
 from app.database import get_session
+from app.models.catalog import Category
 from app.models.restaurant import Restaurant
 from app.models.user import User, UserRole
+from app.schemas.catalog import CategoryRead
 from app.schemas.restaurant import RestaurantCreate, RestaurantRead
 from app.schemas.user import AdminCreateUserRequest, CreateUserResponse, UserRead
 
@@ -81,3 +84,28 @@ async def create_user(body: AdminCreateUserRequest, session: AsyncSession = Depe
         refresh_token=create_refresh_token(str(user.id), user.token_version),
         user=UserRead.model_validate(user),
     )
+
+
+class CategoryBuyerUpdate(BaseModel):
+    default_buyer_id: uuid.UUID | None
+
+
+@router.patch("/categories/{category_id}/buyer", response_model=CategoryRead,
+              dependencies=[Depends(role_required(UserRole.admin))])
+async def set_category_default_buyer(
+    category_id: uuid.UUID,
+    body: CategoryBuyerUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    """Set or clear the default buyer for a category (used in auto-routing)."""
+    cat = await session.get(Category, category_id)
+    if not cat:
+        raise HTTPException(status_code=404, detail="Category not found")
+    if body.default_buyer_id:
+        buyer = await session.get(User, body.default_buyer_id)
+        if not buyer or buyer.role not in (UserRole.buyer, UserRole.admin):
+            raise HTTPException(status_code=400, detail="Invalid buyer")
+    cat.default_buyer_id = body.default_buyer_id
+    await session.commit()
+    await session.refresh(cat)
+    return cat

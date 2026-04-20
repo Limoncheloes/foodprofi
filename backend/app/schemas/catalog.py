@@ -12,6 +12,7 @@ class CategoryRead(BaseModel):
     id: uuid.UUID
     name: str
     sort_order: int
+    default_buyer_id: uuid.UUID | None = None
 
     model_config = {"from_attributes": True}
 

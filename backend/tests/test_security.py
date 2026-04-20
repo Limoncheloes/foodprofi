@@ -41,10 +41,13 @@ async def setup_two_restaurants(client, admin, cook1_phone, cook2_phone):
 
 
 async def test_cannot_register_as_admin(client: AsyncClient):
+    # role field is ignored on public register — user always gets cook role
     resp = await client.post("/auth/register", json={
         "phone": "+99670099901", "password": "pass123", "name": "Hacker", "role": "admin"
     })
-    assert resp.status_code == 422
+    assert resp.status_code == 201
+    me = await client.get("/auth/me", headers={"Authorization": f"Bearer {resp.json()['access_token']}"})
+    assert me.json()["role"] == "cook"
 
 
 async def test_password_too_short_rejected(client: AsyncClient):

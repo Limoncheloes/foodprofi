@@ -5,11 +5,16 @@ from helpers import create_admin_headers
 
 
 async def register(client: AsyncClient, phone: str, role: str, name: str = "U",
-                   rest_id: str | None = None) -> dict:
-    body = {"phone": phone, "password": "pass123", "name": name, "role": role}
+                   rest_id: str | None = None, admin_headers: dict | None = None) -> dict:
+    body = {"phone": phone, "password": "pass123", "name": name}
     if rest_id:
         body["restaurant_id"] = rest_id
-    resp = await client.post("/auth/register", json=body)
+    if role == "cook":
+        resp = await client.post("/auth/register", json=body)
+    else:
+        body["role"] = role
+        resp = await client.post("/admin/users", json=body, headers=admin_headers)
+    assert resp.status_code in (200, 201), resp.text
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
 
@@ -38,7 +43,7 @@ async def setup_all(client, admin_phone, cook_phone, buyer_phone=None):
     )
     rest_id = rest.json()["id"]
     cook = await register(client, cook_phone, "cook", rest_id=rest_id)
-    buyer = await register(client, buyer_phone, "buyer") if buyer_phone else None
+    buyer = await register(client, buyer_phone, "buyer", admin_headers=admin) if buyer_phone else None
     return admin, cook, buyer, rest_id, item.json()["id"]
 
 

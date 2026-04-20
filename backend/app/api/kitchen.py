@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, date
+from datetime import datetime, date, time
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -170,17 +170,34 @@ async def submit_procurement_order(
 
 @router.get("/orders", response_model=list[ProcurementOrderRead])
 async def list_procurement_orders(
-    current_user: User = Depends(role_required(*_COOK_ROLES)),
+    status: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    restaurant_id: uuid.UUID | None = None,
+    current_user: User = Depends(role_required(*_COOK_ROLES, UserRole.manager, UserRole.curator, UserRole.admin)),
     session: AsyncSession = Depends(get_session),
 ) -> list[ProcurementOrderRead]:
-    """List procurement orders for the current cook (by their restaurant)."""
+    """List procurement orders with optional filters by status, date range, and restaurant."""
     q = (
         select(Order)
         .options(selectinload(Order.user), selectinload(Order.restaurant))
         .order_by(Order.created_at.desc())
     )
-    if current_user.role == UserRole.cook:
+    # Cook and manager see only their restaurant
+    if current_user.role in (UserRole.cook, UserRole.manager):
         q = q.where(Order.restaurant_id == current_user.restaurant_id)
+    elif restaurant_id:
+        q = q.where(Order.restaurant_id == restaurant_id)
+
+    if status:
+        try:
+            q = q.where(Order.status == OrderStatus(status))
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+    if date_from:
+        q = q.where(Order.created_at >= datetime.combine(date_from, time.min))
+    if date_to:
+        q = q.where(Order.created_at <= datetime.combine(date_to, time.max))
 
     orders_result = await session.execute(q)
     orders = orders_result.scalars().all()

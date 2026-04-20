@@ -32,6 +32,8 @@ async def get_current_user(
     user = await session.get(User, uid)
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    if payload.get("ver") != user.token_version:
+        raise HTTPException(status_code=401, detail="Token revoked")
     return user
 
 

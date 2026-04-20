@@ -13,6 +13,7 @@ from app.auth.jwt import (
     verify_password,
 )
 from app.auth.schemas import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse
+from app.models.user import UserRole
 from app.database import get_session
 from app.limiter import limiter
 from app.models.user import User
@@ -32,7 +33,7 @@ async def register(request: Request, body: RegisterRequest, session: AsyncSessio
         name=body.name,
         phone=body.phone,
         password_hash=hash_password(body.password),
-        role=body.role,
+        role=UserRole.cook,
         restaurant_id=body.restaurant_id,
     )
     session.add(user)
@@ -40,7 +41,7 @@ async def register(request: Request, body: RegisterRequest, session: AsyncSessio
     await session.refresh(user)
 
     return TokenResponse(
-        access_token=create_access_token(str(user.id), user.role.value),
+        access_token=create_access_token(str(user.id), user.role.value, user.token_version),
         refresh_token=create_refresh_token(str(user.id), user.token_version),
     )
 
@@ -56,7 +57,7 @@ async def login(request: Request, body: LoginRequest, session: AsyncSession = De
         )
 
     return TokenResponse(
-        access_token=create_access_token(str(user.id), user.role.value),
+        access_token=create_access_token(str(user.id), user.role.value, user.token_version),
         refresh_token=create_refresh_token(str(user.id), user.token_version),
     )
 
@@ -79,7 +80,7 @@ async def refresh(request: Request, body: RefreshRequest, session: AsyncSession 
         raise HTTPException(status_code=401, detail="Token revoked")
 
     return TokenResponse(
-        access_token=create_access_token(str(user.id), user.role.value),
+        access_token=create_access_token(str(user.id), user.role.value, user.token_version),
         refresh_token=create_refresh_token(str(user.id), user.token_version),
     )
 

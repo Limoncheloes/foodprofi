@@ -4,11 +4,16 @@ from httpx import AsyncClient
 
 
 async def register(client: AsyncClient, phone: str, role: str,
-                   rest_id: str | None = None) -> dict:
-    body = {"phone": phone, "password": "pass123", "name": "U", "role": role}
+                   rest_id: str | None = None, admin_headers: dict | None = None) -> dict:
+    body = {"phone": phone, "password": "pass123", "name": "U"}
     if rest_id:
         body["restaurant_id"] = rest_id
-    resp = await client.post("/auth/register", json=body)
+    if role == "cook":
+        resp = await client.post("/auth/register", json=body)
+    else:
+        body["role"] = role
+        resp = await client.post("/admin/users", json=body, headers=admin_headers)
+    assert resp.status_code in (200, 201), resp.text
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
 
@@ -45,8 +50,8 @@ async def test_warehouse_advances_at_warehouse_to_packed(
     client: AsyncClient, admin_token: dict
 ):
     cook, rest_id, item_id = await setup(client, admin_token, "+99670500002")
-    buyer = await register(client, "+99670500003", "buyer")
-    warehouse = await register(client, "+99670500004", "warehouse")
+    buyer = await register(client, "+99670500003", "buyer", admin_headers=admin_token)
+    warehouse = await register(client, "+99670500004", "warehouse", admin_headers=admin_token)
 
     order = await client.post(
         "/orders",
@@ -69,8 +74,8 @@ async def test_warehouse_advances_packed_to_in_delivery(
     client: AsyncClient, admin_token: dict
 ):
     cook, rest_id, item_id = await setup(client, admin_token, "+99670500006")
-    buyer = await register(client, "+99670500007", "buyer")
-    warehouse = await register(client, "+99670500008", "warehouse")
+    buyer = await register(client, "+99670500007", "buyer", admin_headers=admin_token)
+    warehouse = await register(client, "+99670500008", "warehouse", admin_headers=admin_token)
 
     order = await client.post(
         "/orders",
@@ -94,9 +99,9 @@ async def test_driver_advances_in_delivery_to_delivered(
     client: AsyncClient, admin_token: dict
 ):
     cook, rest_id, item_id = await setup(client, admin_token, "+99670500010")
-    buyer = await register(client, "+99670500011", "buyer")
-    warehouse = await register(client, "+99670500012", "warehouse")
-    driver = await register(client, "+99670500013", "driver")
+    buyer = await register(client, "+99670500011", "buyer", admin_headers=admin_token)
+    warehouse = await register(client, "+99670500012", "warehouse", admin_headers=admin_token)
+    driver = await register(client, "+99670500013", "driver", admin_headers=admin_token)
 
     order = await client.post(
         "/orders",
@@ -122,8 +127,8 @@ async def test_warehouse_cannot_skip_to_in_delivery(
 ):
     """Warehouse cannot go at_warehouse -> in_delivery (must go through packed)."""
     cook, rest_id, item_id = await setup(client, admin_token, "+99670500015")
-    buyer = await register(client, "+99670500016", "buyer")
-    warehouse = await register(client, "+99670500017", "warehouse")
+    buyer = await register(client, "+99670500016", "buyer", admin_headers=admin_token)
+    warehouse = await register(client, "+99670500017", "warehouse", admin_headers=admin_token)
 
     order = await client.post(
         "/orders",
@@ -146,9 +151,9 @@ async def test_driver_cannot_mark_packed_as_delivered(
 ):
     """Driver cannot skip in_delivery."""
     cook, rest_id, item_id = await setup(client, admin_token, "+99670500019")
-    buyer = await register(client, "+99670500020", "buyer")
-    warehouse = await register(client, "+99670500021", "warehouse")
-    driver = await register(client, "+99670500022", "driver")
+    buyer = await register(client, "+99670500020", "buyer", admin_headers=admin_token)
+    warehouse = await register(client, "+99670500021", "warehouse", admin_headers=admin_token)
+    driver = await register(client, "+99670500022", "driver", admin_headers=admin_token)
 
     order = await client.post(
         "/orders",

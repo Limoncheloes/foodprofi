@@ -1,16 +1,21 @@
+import io
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, role_required
+from app.limiter import limiter
 from app.database import get_session
 from app.models.order import Order, OrderItem, OrderStatus
+from app.models.procurement import ProcurementItem
 from app.models.restaurant import Restaurant
 from app.models.user import User, UserRole
 from app.schemas.order import OrderCreate, OrderRead, OrderStatusUpdate
+from app.services.documents import generate_docx, generate_xlsx
 from app.services.stock import consume_order_stock
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -156,3 +161,104 @@ async def update_order_status(
 
     await session.commit()
     return order
+
+
+async def _load_export_items(session, order_id):
+    """Load procurement items with buyer and category names for export."""
+    result = await session.execute(
+        select(ProcurementItem)
+        .where(ProcurementItem.order_id == order_id)
+        .options(
+            selectinload(ProcurementItem.catalog_item),
+            selectinload(ProcurementItem.category),
+            selectinload(ProcurementItem.buyer),
+        )
+        .order_by(ProcurementItem.buyer_id, ProcurementItem.created_at)
+    )
+    items = result.scalars().all()
+
+    class ExportItem:
+        def __init__(self, pi):
+            self.display_name = pi.display_name
+            self.quantity_ordered = pi.quantity_ordered
+            self.quantity_received = pi.quantity_received
+            self.unit = pi.unit
+            self.buyer_name = pi.buyer.name if pi.buyer else "Не назначен"
+            self.category_name = pi.category.name if pi.category else ""
+            self.substitution_note = pi.substitution_note
+            self.is_catalog_item = pi.is_catalog_item
+            self.raw_name = pi.raw_name
+
+    return [ExportItem(i) for i in items]
+
+
+@router.get("/{order_id}/export/docx")
+@limiter.limit("10/minute")
+async def export_order_docx(
+    request: Request,
+    order_id: uuid.UUID,
+    current_user=Depends(role_required(UserRole.curator, UserRole.manager, UserRole.admin)),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.execute(
+        select(Order)
+        .where(Order.id == order_id)
+        .options(selectinload(Order.user), selectinload(Order.restaurant))
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if current_user.role == UserRole.manager and order.restaurant_id != current_user.restaurant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    items = await _load_export_items(session, order_id)
+    if not items:
+        raise HTTPException(status_code=400, detail="Order has no procurement items")
+
+    docx_bytes = generate_docx(order, items)
+    filename = f"zakupka_{str(order_id)[:8]}.docx"
+    return StreamingResponse(
+        io.BytesIO(docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/{order_id}/export/xlsx")
+@limiter.limit("10/minute")
+async def export_order_xlsx(
+    request: Request,
+    order_id: uuid.UUID,
+    current_user=Depends(role_required(UserRole.curator, UserRole.manager, UserRole.admin)),
+    session: AsyncSession = Depends(get_session),
+):
+    result = await session.execute(
+        select(Order)
+        .where(Order.id == order_id)
+        .options(selectinload(Order.user), selectinload(Order.restaurant))
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if current_user.role == UserRole.manager and order.restaurant_id != current_user.restaurant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    items = await _load_export_items(session, order_id)
+    if not items:
+        raise HTTPException(status_code=400, detail="Order has no procurement items")
+
+    missing = [i.display_name for i in items if i.quantity_received is None]
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot export: missing quantity_received for: {', '.join(missing[:3])}"
+                   + ("..." if len(missing) > 3 else ""),
+        )
+
+    xlsx_bytes = generate_xlsx(order, items)
+    filename = f"1c_zakupka_{str(order_id)[:8]}.xlsx"
+    return StreamingResponse(
+        io.BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

@@ -80,7 +80,7 @@ async def create_user(body: AdminCreateUserRequest, session: AsyncSession = Depe
     await session.refresh(user)
 
     return CreateUserResponse(
-        access_token=create_access_token(str(user.id), user.role.value),
+        access_token=create_access_token(str(user.id), user.role.value, user.token_version),
         refresh_token=create_refresh_token(str(user.id), user.token_version),
         user=UserRead.model_validate(user),
     )

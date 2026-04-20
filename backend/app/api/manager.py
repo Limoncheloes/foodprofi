@@ -67,7 +67,7 @@ async def add_staff(
         phone=user.phone,
         role=user.role.value,
         restaurant_id=user.restaurant_id,
-        access_token=create_access_token(str(user.id), user.role.value),
+        access_token=create_access_token(str(user.id), user.role.value, user.token_version),
         refresh_token=create_refresh_token(str(user.id), user.token_version),
     )
 

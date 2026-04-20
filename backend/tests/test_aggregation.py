@@ -1,16 +1,20 @@
 from datetime import date
-import pytest
 from httpx import AsyncClient
 
 from helpers import create_admin_headers
 
 
 async def register(client: AsyncClient, phone: str, role: str, name: str = "U",
-                   rest_id: str | None = None) -> dict:
-    body = {"phone": phone, "password": "pass123", "name": name, "role": role}
+                   rest_id: str | None = None, admin_headers: dict | None = None) -> dict:
+    body = {"phone": phone, "password": "pass123", "name": name}
     if rest_id:
         body["restaurant_id"] = rest_id
-    resp = await client.post("/auth/register", json=body)
+    if role == "cook":
+        resp = await client.post("/auth/register", json=body)
+    else:
+        body["role"] = role
+        resp = await client.post("/admin/users", json=body, headers=admin_headers)
+    assert resp.status_code in (200, 201), resp.text
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
 
@@ -27,8 +31,8 @@ async def setup_catalog(client, admin):
     return cat.json()["id"], item.json()["id"]
 
 
-async def test_aggregation_empty(client: AsyncClient):
-    buyer = await register(client, "+996700200001", "buyer")
+async def test_aggregation_empty(client: AsyncClient, admin_token: dict):
+    buyer = await register(client, "+996700200001", "buyer", admin_headers=admin_token)
     resp = await client.get(
         "/aggregation/summary",
         params={"target_date": str(date.today())},
@@ -46,7 +50,7 @@ async def test_aggregation_requires_buyer_role(client: AsyncClient):
 
 async def test_aggregation_groups_by_category(client: AsyncClient):
     admin = await create_admin_headers(client, "+996700200003")
-    buyer = await register(client, "+996700200004", "buyer")
+    buyer = await register(client, "+996700200004", "buyer", admin_headers=admin)
     _, item_id = await setup_catalog(client, admin)
 
     rest = await client.post(
@@ -82,7 +86,7 @@ async def test_aggregation_groups_by_category(client: AsyncClient):
 async def test_aggregation_subtracts_inventory(client: AsyncClient):
     """If inventory has 2kg and order needs 5kg, to_buy should be 3kg."""
     admin = await create_admin_headers(client, "+996700200006")
-    buyer = await register(client, "+996700200007", "buyer")
+    buyer = await register(client, "+996700200007", "buyer", admin_headers=admin)
     _, item_id = await setup_catalog(client, admin)
 
     rest = await client.post(
@@ -123,7 +127,7 @@ async def test_aggregation_subtracts_inventory(client: AsyncClient):
 
 async def test_mark_purchased_advances_order_status(client: AsyncClient):
     admin = await create_admin_headers(client, "+996700200009")
-    buyer = await register(client, "+996700200010", "buyer")
+    buyer = await register(client, "+996700200010", "buyer", admin_headers=admin)
     _, item_id = await setup_catalog(client, admin)
 
     rest = await client.post(

@@ -2,12 +2,17 @@ from httpx import AsyncClient
 from sqlalchemy import select
 
 
-async def register(client: AsyncClient, phone: str, role: str, rest_id: str | None = None) -> dict:
-    body = {"phone": phone, "password": "pass123", "name": "U", "role": role}
+async def register(client: AsyncClient, phone: str, role: str, rest_id: str | None = None,
+                   admin_headers: dict | None = None) -> dict:
+    body = {"phone": phone, "password": "pass123", "name": "U"}
     if rest_id:
         body["restaurant_id"] = rest_id
-    resp = await client.post("/auth/register", json=body)
-    assert resp.status_code == 201, resp.text
+    if role == "cook":
+        resp = await client.post("/auth/register", json=body)
+    else:
+        body["role"] = role
+        resp = await client.post("/admin/users", json=body, headers=admin_headers)
+    assert resp.status_code in (200, 201), resp.text
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
 
@@ -28,9 +33,9 @@ async def setup(client: AsyncClient, admin: dict, base_phone: str, order_qty: fl
     item_id = item.json()["id"]
 
     cook = await register(client, base_phone + "0", "cook", rest_id)
-    buyer = await register(client, base_phone + "1", "buyer")
-    warehouse = await register(client, base_phone + "2", "warehouse")
-    driver = await register(client, base_phone + "3", "driver")
+    buyer = await register(client, base_phone + "1", "buyer", admin_headers=admin)
+    warehouse = await register(client, base_phone + "2", "warehouse", admin_headers=admin)
+    driver = await register(client, base_phone + "3", "driver", admin_headers=admin)
 
     order = await client.post(
         "/orders",

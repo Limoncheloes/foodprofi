@@ -1,11 +1,16 @@
 from httpx import AsyncClient
 
 
-async def register(client: AsyncClient, phone: str, role: str) -> dict:
-    resp = await client.post("/auth/register", json={
-        "phone": phone, "password": "pass123", "name": "U", "role": role
-    })
-    assert resp.status_code == 201, resp.text
+async def register(client: AsyncClient, phone: str, role: str, admin_headers: dict | None = None) -> dict:
+    if role == "cook":
+        resp = await client.post("/auth/register", json={
+            "phone": phone, "password": "pass123", "name": "U"
+        })
+    else:
+        resp = await client.post("/admin/users", json={
+            "phone": phone, "password": "pass123", "name": "U", "role": role
+        }, headers=admin_headers)
+    assert resp.status_code in (200, 201), resp.text
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
 
@@ -19,15 +24,15 @@ async def setup_item(client: AsyncClient, admin: dict) -> str:
     return item.json()["id"]
 
 
-async def test_logs_empty_on_fresh_db(client: AsyncClient):
-    warehouse = await register(client, "+9967120001", "warehouse")
+async def test_logs_empty_on_fresh_db(client: AsyncClient, admin_token: dict):
+    warehouse = await register(client, "+9967120001", "warehouse", admin_token)
     resp = await client.get("/warehouse/inventory/logs", headers=warehouse)
     assert resp.status_code == 200
     assert resp.json() == []
 
 
 async def test_receive_creates_log_entry(client: AsyncClient, admin_token: dict):
-    warehouse = await register(client, "+9967120003", "warehouse")
+    warehouse = await register(client, "+9967120003", "warehouse", admin_token)
     item_id = await setup_item(client, admin_token)
 
     await client.post(
@@ -51,7 +56,7 @@ async def test_receive_creates_log_entry(client: AsyncClient, admin_token: dict)
 
 
 async def test_adjust_creates_log_entry(client: AsyncClient, admin_token: dict):
-    warehouse = await register(client, "+9967120005", "warehouse")
+    warehouse = await register(client, "+9967120005", "warehouse", admin_token)
     item_id = await setup_item(client, admin_token)
 
     await client.post(
@@ -74,7 +79,7 @@ async def test_adjust_creates_log_entry(client: AsyncClient, admin_token: dict):
 
 
 async def test_logs_ordered_newest_first(client: AsyncClient, admin_token: dict):
-    warehouse = await register(client, "+9967120007", "warehouse")
+    warehouse = await register(client, "+9967120007", "warehouse", admin_token)
     item_id = await setup_item(client, admin_token)
 
     await client.post(
@@ -117,13 +122,13 @@ async def test_consumed_log_visible_in_api(client: AsyncClient, admin_token: dic
     item_id = item.json()["id"]
 
     cook_resp = await client.post("/auth/register", json={
-        "phone": "+9967120011", "password": "pass123", "name": "Cook", "role": "cook",
+        "phone": "+9967120011", "password": "pass123", "name": "Cook",
         "restaurant_id": rest_id,
     })
     cook = {"Authorization": f"Bearer {cook_resp.json()['access_token']}"}
-    buyer = await register(client, "+9967120012", "buyer")
-    warehouse = await register(client, "+9967120013", "warehouse")
-    driver = await register(client, "+9967120014", "driver")
+    buyer = await register(client, "+9967120012", "buyer", admin_token)
+    warehouse = await register(client, "+9967120013", "warehouse", admin_token)
+    driver = await register(client, "+9967120014", "driver", admin_token)
 
     await client.post(
         "/warehouse/inventory/receive",

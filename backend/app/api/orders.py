@@ -1,13 +1,14 @@
 import io
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth.dependencies import get_current_user, role_required
+from app.limiter import limiter
 from app.database import get_session
 from app.models.order import Order, OrderItem, OrderStatus
 from app.models.procurement import ProcurementItem
@@ -192,7 +193,9 @@ async def _load_export_items(session, order_id):
 
 
 @router.get("/{order_id}/export/docx")
+@limiter.limit("10/minute")
 async def export_order_docx(
+    request: Request,
     order_id: uuid.UUID,
     current_user=Depends(role_required(UserRole.curator, UserRole.manager, UserRole.admin)),
     session: AsyncSession = Depends(get_session),
@@ -205,6 +208,8 @@ async def export_order_docx(
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    if current_user.role == UserRole.manager and order.restaurant_id != current_user.restaurant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     items = await _load_export_items(session, order_id)
     if not items:
@@ -220,7 +225,9 @@ async def export_order_docx(
 
 
 @router.get("/{order_id}/export/xlsx")
+@limiter.limit("10/minute")
 async def export_order_xlsx(
+    request: Request,
     order_id: uuid.UUID,
     current_user=Depends(role_required(UserRole.curator, UserRole.manager, UserRole.admin)),
     session: AsyncSession = Depends(get_session),
@@ -233,6 +240,8 @@ async def export_order_xlsx(
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    if current_user.role == UserRole.manager and order.restaurant_id != current_user.restaurant_id:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     items = await _load_export_items(session, order_id)
     if not items:

@@ -193,6 +193,17 @@ export interface ProcurementOrder {
   items: ProcurementItem[]
 }
 
+export interface BuyerItemRead {
+  id: string
+  order_id: string
+  display_name: string
+  quantity_ordered: number
+  quantity_received: number | null
+  unit: string
+  restaurant_name: string
+  order_date: string
+}
+
 export interface WhatsAppUrls {
   primary: string | null
   fallback: string

@@ -27,6 +27,9 @@ export default function BuyerLayout({ children }: { children: React.ReactNode })
         <Link href="/purchase">
           <Button variant="ghost" size="sm">Закупить</Button>
         </Link>
+        <Link href="/procurement">
+          <Button variant="ghost" size="sm">Мои позиции</Button>
+        </Link>
       </nav>
       {children}
     </div>
